@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import ImageTrail, { ImageTrailItem } from '../components/ImageTrail';
 import { useMenuStore } from '../store/useMenuStore';
 import { COOKIE_PRODUCTS } from '../data/products';
@@ -27,6 +27,23 @@ const MOBILE_POSITIONS = [
   { top: '40%',   right: '1%'  },
 ] as const;
 const MOBILE_ROTATIONS = [-8, 7, -4, 5, -5, 9, -7, 6] as const;
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const onChange = () => setMatches(media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, [query]);
+
+  return matches;
+}
 
 function MobileSlideshow({ images }: { images: string[] }) {
   // Each entry: { src, pos, rot, id }
@@ -66,28 +83,28 @@ function MobileSlideshow({ images }: { images: string[] }) {
 
   return (
     <div className="absolute inset-x-0 top-10 bottom-0 pointer-events-none z-0 overflow-hidden lg:hidden">
-      <AnimatePresence>
-        {visible.map(({ src, pos, rot, id }) => (
-          <motion.img
-            key={id}
-            src={src}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            initial={{ opacity: 0, scale: 0.78, rotate: rot - 8 }}
-            animate={{ opacity: 0.85, scale: 1, rotate: rot }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
-            className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-xl border-2 border-white/30"
-            style={pos}
-          />
-        ))}
-      </AnimatePresence>
+      {visible.map(({ src, pos, rot, id }) => (
+        <motion.img
+          key={id}
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          initial={{ opacity: 0, scale: 0.78, rotate: rot - 8 }}
+          animate={{ opacity: 0.85, scale: 1, rotate: rot }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
+          className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-xl border-2 border-white/30"
+          style={pos}
+        />
+      ))}
     </div>
   );
 }
 
 export function Home() {
   const [trailActive, setTrailActive] = useState(true);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Hero box dynamic sizing for revolving text
   const heroBoxRef = useRef<HTMLDivElement>(null);
@@ -111,7 +128,7 @@ export function Home() {
   // Revolving text animation — single textPath, ever-increasing offset (no jump, no doubling)
   const tp1Ref = useRef<SVGTextPathElement>(null);
   useEffect(() => {
-    if (!boxSize) return;
+    if (!boxSize || !isDesktop) return;
     let frame: number;
     const speed = 0.003; // % of path length per ms
     const start = performance.now();
@@ -122,7 +139,7 @@ export function Home() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [boxSize]);
+  }, [boxSize, isDesktop]);
 
   // Horizontal-scroll heading
   const headingOuterRef = useRef<HTMLDivElement>(null);
@@ -204,15 +221,15 @@ export function Home() {
       {/* ─── Hero ───────────────────────────────────────────────── */}
       <section className="relative w-full min-h-[calc(100dvh-6.5rem)] sm:h-[calc(100vh-6rem)] flex flex-col items-center overflow-hidden" aria-label="Hero">
         {/* Background glows */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[700px] h-[400px] sm:h-[700px] bg-accent/8 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
-        <div className="absolute top-0 right-0 w-[250px] sm:w-[450px] h-[250px] sm:h-[450px] bg-blush/20 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
-        <div className="absolute bottom-0 left-0 w-[200px] sm:w-[400px] h-[200px] sm:h-[400px] bg-blush/10 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:block sm:w-[700px] sm:h-[700px] bg-accent/8 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
+        <div className="absolute top-0 right-0 hidden sm:block sm:w-[450px] sm:h-[450px] bg-blush/20 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
+        <div className="absolute bottom-0 left-0 hidden sm:block sm:w-[400px] sm:h-[400px] bg-blush/10 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
 
         {/* Mobile Slideshow */}
-        <MobileSlideshow images={trailImages} />
+        {!isDesktop && <MobileSlideshow images={trailImages} />}
 
         {/* Image Trail — Desktop only */}
-        <div className="absolute inset-0 z-0 hidden lg:block">
+        {isDesktop && <div className="absolute inset-0 z-0 hidden lg:block">
           <ImageTrail
             className="absolute inset-0 z-0"
             disabled={!trailActive}
@@ -227,7 +244,7 @@ export function Home() {
               </ImageTrailItem>
             ))}
           </ImageTrail>
-        </div>
+        </div>}
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -254,7 +271,7 @@ export function Home() {
                 tabIndex={-1}
               />
               {/* Revolving border text — JS-animated, dual textPath for seamless loop */}
-              {boxSize && (() => {
+              {isDesktop && boxSize && (() => {
                 const { w, h } = boxSize;
                 const r = 28;
                 const cx = Math.round(w / 2);
@@ -321,12 +338,12 @@ export function Home() {
       </div>{/* end main-content z-[1] wrapper */}
 
       {/* ─── Full-screen horizontal-scroll heading ────────────── */}
-      <div ref={headingOuterRef} className="relative z-[1]" style={{ height: '180vh' }}>
-        <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex items-center bg-bg">
+      <div ref={headingOuterRef} className="relative z-[1]" style={{ height: isMobile ? '70vh' : '180vh' }}>
+        <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex items-center bg-bg" style={{ height: isMobile ? '70vh' : '100vh' }}>
           <motion.div
             className="flex items-center whitespace-nowrap select-none pl-[10vw]"
             style={{
-              x: headingX,
+              x: isMobile ? 0 : headingX,
               fontFamily: '"Fredoka One", cursive',
               color: 'var(--color-ink)',
               fontSize: 'clamp(4rem, 14vw, 14rem)',
@@ -382,8 +399,8 @@ export function Home() {
             }}
           />
           {/* Ambient glow */}
-          <div className="absolute top-1/4 right-[-10%] w-[500px] h-[500px] rounded-full blur-[140px] pointer-events-none" style={{ backgroundColor: 'rgba(196,117,42,0.08)' }} />
-          <div className="absolute bottom-1/4 left-[-8%] w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: 'rgba(92,51,23,0.15)' }} />
+          <div className="absolute top-1/4 right-[-10%] hidden md:block w-[500px] h-[500px] rounded-full blur-[140px] pointer-events-none" style={{ backgroundColor: 'rgba(196,117,42,0.08)' }} />
+          <div className="absolute bottom-1/4 left-[-8%] hidden md:block w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: 'rgba(92,51,23,0.15)' }} />
 
           <div className="relative w-full h-full overflow-hidden">
 

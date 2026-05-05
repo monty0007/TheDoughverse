@@ -62,15 +62,40 @@ const MOB_NAV_LINKS = [
 function useNavbarVisibility() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const scrolledRef = useRef(false);
+  const hiddenRef = useRef(false);
+  const lastYRef = useRef(0);
+  const tickingRef = useRef(false);
 
   useEffect(() => {
-    let lastY = window.scrollY;
-    const onScroll = () => {
+    lastYRef.current = window.scrollY;
+
+    const updateVisibility = () => {
       const y = window.scrollY;
-      setScrolled(y > 20);
-      setHidden(y > 80 && y > lastY);
-      lastY = y;
+      const nextScrolled = y > 20;
+      const nextHidden = y > 80 && y > lastYRef.current;
+
+      if (nextScrolled !== scrolledRef.current) {
+        scrolledRef.current = nextScrolled;
+        setScrolled(nextScrolled);
+      }
+
+      if (nextHidden !== hiddenRef.current) {
+        hiddenRef.current = nextHidden;
+        setHidden(nextHidden);
+      }
+
+      lastYRef.current = y;
+      tickingRef.current = false;
     };
+
+    const onScroll = () => {
+      if (tickingRef.current) return;
+      tickingRef.current = true;
+      requestAnimationFrame(updateVisibility);
+    };
+
+    updateVisibility();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -238,7 +263,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         hidden ? '-translate-y-full' : 'translate-y-0',
         scrolled
-          ? 'bg-bg/90 backdrop-blur-xl border-b border-ink/10 shadow-sm sm:bg-bg/90'
+          ? 'bg-bg/95 border-b border-ink/10 shadow-sm sm:bg-bg/90 sm:backdrop-blur-xl'
           : 'bg-transparent'
       )}
       style={{

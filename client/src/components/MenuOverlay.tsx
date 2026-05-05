@@ -1,46 +1,33 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { X, ShoppingCart } from 'lucide-react';
+import { X, ShoppingCart, Plus, Check } from 'lucide-react';
 import { useMenuStore } from '../store/useMenuStore';
 import { useCartStore } from '../store/useCartStore';
-import { OrynLogo } from './OrynLogo';
+import { COOKIE_PRODUCTS } from '../data/products';
+import { getProductImage } from '../lib/productImages';
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const BLUE  = '#1A4FE8';
 const CREAM = '#F5F0D8';
-const PINK  = '#E8B4D8';
 const DOT   = '#c8c29a';
 
-// ─── Menu data ──────────────────────────────────────────────────────────────
-const CLASIC = [
-  { name: 'Chocochip',  sub: 'con chispas de chocolate' },
-  { name: 'Red Velvet', sub: 'con chispas de chocolate blanco' },
-  { name: 'Chocolate',  sub: 'con chispas de chocolate' },
-  { name: 'Zanahoria',  sub: 'con chispas de chocolate blanco' },
-];
+const BADGE_STYLE: Record<string, { bg: string; color: string }> = {
+  BESTSELLER: { bg: '#1A4FE8', color: '#fff' },
+  NEW:        { bg: '#2ECC71', color: '#fff' },
+  SEASONAL:   { bg: '#E67E22', color: '#fff' },
+  LIMITED:    { bg: '#E74C3C', color: '#fff' },
+};
 
-const PREMIUM = [
-  { name: 'Party',       sub: 'con lentejas de colores' },
-  { name: 'Oreo',        sub: 'con trozos de galleta oreo' },
-  { name: 'Marshmallow', sub: 'con los clásicos marshmallows' },
-  { name: 'Nutella',     sub: 'relleno de nutella y chispas de chocolate' },
-];
-
-const BUNDLES = [
-  { label: 'Mr. Dúo',      price: '$10' },
-  { label: 'Mr. Box',      price: '$25' },
-  { label: 'Super Cookie', price: '$45' },
-];
-
-// ─── Spring config for the push-slide ───────────────────────────────────────
+// ─── Spring config ───────────────────────────────────────────────────────────
 const SPRING = { type: 'spring' as const, stiffness: 260, damping: 28 };
 
 // ─── Menu panel (slides in from right) ──────────────────────────────────────
 function MenuPanel({ onClose }: { onClose: () => void }) {
-  const { totalItems } = useCartStore();
+  const { totalItems, addItem, items } = useCartStore();
   const navigate = useNavigate();
   const cartCount = totalItems();
+  const [justAdded, setJustAdded] = useState<string | null>(null);
 
   // Lock body scroll
   useEffect(() => {
@@ -55,9 +42,15 @@ function MenuPanel({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  const handleAdd = (product: (typeof COOKIE_PRODUCTS)[0]) => {
+    addItem(product);
+    setJustAdded(product.id);
+    setTimeout(() => setJustAdded(null), 1200);
+  };
+
   return (
     <motion.div
-      className="fixed top-0 right-0 h-full w-full md:w-[60vw] z-[70] overflow-y-auto"
+      className="fixed top-0 right-0 h-full w-full md:w-[56vw] lg:w-[48vw] z-[70] overflow-y-auto"
       style={{
         backgroundColor: CREAM,
         backgroundImage: `radial-gradient(circle, ${DOT} 1px, transparent 1px)`,
@@ -71,21 +64,32 @@ function MenuPanel({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label="Menu card"
     >
-      <div className="p-7 sm:p-12 min-h-full flex flex-col">
+      <div className="p-6 sm:p-10 min-h-full flex flex-col">
 
         {/* ── Header ───────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between mb-10 gap-4">
-          <motion.h1
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.4 }}
-            className="text-5xl sm:text-7xl md:text-8xl font-bold leading-none"
-            style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
-          >
-            CARTA
-          </motion.h1>
+        <div className="flex items-start justify-between mb-8 gap-4">
+          <div>
+            <motion.h1
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
+              className="text-4xl sm:text-5xl font-bold leading-none"
+              style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
+            >
+              Our Cookies
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-xs mt-1 uppercase tracking-widest font-bold"
+              style={{ color: BLUE, opacity: 0.45, fontFamily: '"Nunito", sans-serif' }}
+            >
+              Eggless · Baked fresh on order
+            </motion.p>
+          </div>
 
-          <div className="flex items-center gap-2 mt-2 shrink-0">
+          <div className="flex items-center gap-2 mt-1 shrink-0">
             <button
               onClick={() => { onClose(); navigate('/cart'); }}
               className="relative p-2.5 rounded-full text-white transition-all hover:scale-105"
@@ -96,7 +100,7 @@ function MenuPanel({ onClose }: { onClose: () => void }) {
               {cartCount > 0 && (
                 <span
                   className="absolute -top-1 -right-1 w-4 h-4 text-[9px] font-bold rounded-full flex items-center justify-center leading-none"
-                  style={{ backgroundColor: PINK, color: BLUE }}
+                  style={{ backgroundColor: '#E8B4D8', color: BLUE }}
                 >
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
@@ -113,120 +117,94 @@ function MenuPanel({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* ── Two-column body ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 flex-1">
+        {/* ── Product list ─────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-3">
+          {COOKIE_PRODUCTS.map((product, i) => {
+            const inCart = items.some(ci => ci.product.id === product.id);
+            const added = justAdded === product.id;
+            const badge = product.badge ? BADGE_STYLE[product.badge] : null;
 
-          {/* LEFT — Classic */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2, duration: 0.45 }}
-          >
-            <p
-              className="text-center tracking-[0.25em] text-sm mb-6"
-              style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
-            >
-              · CLASIC ·
-            </p>
-            <div className="space-y-5">
-              {CLASIC.map((item, i) => (
-                <motion.div
-                  key={item.name}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.25 + i * 0.06, duration: 0.35 }}
-                >
-                  <p
-                    className="text-2xl font-bold leading-tight"
-                    style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
-                  >
-                    {item.name.toUpperCase()}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: BLUE, opacity: 0.55 }}>
-                    {item.sub}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* RIGHT — Pricing + Premium */}
-          <motion.div
-            className="flex flex-col gap-7"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.28, duration: 0.45 }}
-          >
-            {/* Pink blob pricing badge */}
-            <div
-              className="px-6 py-5 text-center"
-              style={{
-                backgroundColor: PINK,
-                borderRadius: '60% 40% 55% 45% / 45% 55% 40% 60%',
-              }}
-            >
-              <p
-                className="text-xs italic mb-3 leading-snug"
-                style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
+            return (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.12 + i * 0.05, duration: 0.35 }}
+                className="flex items-center gap-4 rounded-2xl p-3 pr-4"
+                style={{ backgroundColor: 'rgba(255,255,255,0.65)', border: '1px solid rgba(26,79,232,0.08)' }}
               >
-                Baking with love · MR.
-              </p>
-              <div className="space-y-1">
-                {BUNDLES.map(({ label, price }) => (
-                  <div key={label} className="flex items-baseline justify-center gap-2">
-                    <span className="text-sm" style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}>
-                      {label}
-                    </span>
-                    <span className="text-2xl font-bold" style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}>
-                      {price}
-                    </span>
+                {/* Image */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0">
+                  <img
+                    src={getProductImage(product)}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold truncate" style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}>
+                      {product.name}
+                    </p>
+                    {badge && (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ backgroundColor: badge.bg, color: badge.color }}
+                      >
+                        {product.badge}
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
+                  <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: BLUE, opacity: 0.5, fontFamily: '"Nunito", sans-serif' }}>
+                    {product.description}
+                  </p>
+                  <p className="text-sm font-bold mt-1" style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}>
+                    ₹{product.price}
+                  </p>
+                </div>
 
-            {/* Premium */}
-            <div>
-              <p
-                className="text-center tracking-[0.25em] text-sm mb-6"
-                style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
-              >
-                · PREMIUM ·
-              </p>
-              <div className="space-y-5">
-                {PREMIUM.map((item, i) => (
-                  <motion.div
-                    key={item.name}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + i * 0.06, duration: 0.35 }}
-                  >
-                    <p
-                      className="text-2xl font-bold leading-tight"
-                      style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
-                    >
-                      {item.name.toUpperCase()}
-                    </p>
-                    <p className="text-xs mt-0.5" style={{ color: BLUE, opacity: 0.55 }}>
-                      {item.sub}
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
+                {/* Add button */}
+                <motion.button
+                  onClick={() => handleAdd(product)}
+                  whileTap={{ scale: 0.88 }}
+                  className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-white transition-colors"
+                  style={{ backgroundColor: added ? '#2ECC71' : inCart ? `${BLUE}cc` : BLUE }}
+                  aria-label={`Add ${product.name} to cart`}
+                >
+                  {added ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </motion.button>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* ── Mascot ───────────────────────────────────────────────────── */}
+        {/* ── Footer CTA ───────────────────────────────────────────────── */}
         <motion.div
-          className="flex justify-start mt-10"
-          initial={{ opacity: 0, y: 20 }}
+          className="mt-8 flex gap-3"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.4 }}
+          transition={{ delay: 0.6 }}
         >
-          <div className="w-24 h-28" style={{ color: BLUE }}>
-            <OrynLogo />
-          </div>
+          <button
+            onClick={() => { onClose(); navigate('/cookies'); }}
+            className="flex-1 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110 active:scale-95"
+            style={{ backgroundColor: BLUE, color: '#fff', fontFamily: '"Nunito", sans-serif' }}
+          >
+            See all cookies →
+          </button>
+          {cartCount > 0 && (
+            <button
+              onClick={() => { onClose(); navigate('/cart'); }}
+              className="flex-1 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110 active:scale-95"
+              style={{ backgroundColor: '#2ECC71', color: '#fff', fontFamily: '"Nunito", sans-serif' }}
+            >
+              View cart ({cartCount})
+            </button>
+          )}
         </motion.div>
       </div>
     </motion.div>

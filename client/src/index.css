@@ -64,24 +64,6 @@
     }
   }
 
-  /* Skip to content link */
-  .skip-link {
-    position: absolute;
-    top: -100%;
-    left: 16px;
-    z-index: 9999;
-    padding: 12px 24px;
-    background: var(--theme-accent);
-    color: #fff;
-    font-weight: 700;
-    font-size: 14px;
-    border-radius: 0 0 8px 8px;
-    text-decoration: none;
-    transition: top 0.2s;
-  }
-  .skip-link:focus {
-    top: 0;
-  }
 }
 
 @layer utilities {

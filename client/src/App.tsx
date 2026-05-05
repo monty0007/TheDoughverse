@@ -252,7 +252,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-24 flex items-center justify-between">
 
         {/* Left — search */}
-        <div className="flex items-center relative">
+        <div className="relative z-10 flex items-center">
           <AnimatePresence mode="wait">
             {searchOpen ? (
               <motion.div
@@ -405,18 +405,19 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
         </div>
 
         {/* Right actions */}
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="relative z-10 flex shrink-0 items-center gap-1 sm:gap-2">
           {/* WhatsApp support button */}
           <a
             href={getWhatsAppSupportUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-[44px]"
+            className="flex shrink-0 items-center justify-center gap-1 px-2.5 sm:px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-10 sm:min-h-[44px]"
             style={{ backgroundColor: '#25D366', color: '#fff', fontFamily: '"Nunito", sans-serif' }}
             aria-label="Contact support on WhatsApp"
           >
             <WhatsAppIcon className="w-4 h-4 shrink-0" />
-            <span>Support</span>
+            <span className="sm:hidden">Help</span>
+            <span className="hidden sm:inline">Support</span>
           </a>
 
           {/* Theme toggle */}
@@ -498,7 +499,6 @@ export default function App() {
     <Router>
       <ScrollToTop />
       <div className="min-h-screen bg-bg text-ink font-sans selection:bg-accent/30 selection:text-accent">
-        <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="grain-overlay" aria-hidden="true" />
         <Navbar {...navbarVisibility} />
         <MobilePageNav hidden={navbarVisibility.hidden} />

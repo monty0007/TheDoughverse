@@ -4,6 +4,8 @@
  */
 
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { RequireAuth } from './components/RequireAuth';
 import { OrynLogo } from './components/OrynLogo';
 import { MenuOverlay } from './components/MenuOverlay';
@@ -541,6 +543,8 @@ export default function App() {
             },
           }}
         />
+        <Analytics />
+        <SpeedInsights />
       </div>
     </Router>
   );

@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ShoppingBag, MapPin, ArrowLeft, Check } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
-import { useFirebaseAuth } from '../store/useFirebaseAuth';
 import { getWhatsAppNumber } from '../lib/settings';
 
 const BLUE = '#1A4FE8';
@@ -11,25 +10,16 @@ const CREAM = '#FFFCDC';
 
 export function Checkout() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useFirebaseAuth();
   const { items, totalPrice, clearCart } = useCartStore();
   const total = totalPrice();
   const [shipping, setShipping] = useState({ name: '', address: '', city: '', zip: '', phone: '' });
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: CREAM }}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-3 border-[#1A4FE8]/20 border-t-[#1A4FE8] rounded-full animate-spin" />
-          <p className="text-xs uppercase tracking-widest font-bold" style={{ color: BLUE, opacity: 0.5, fontFamily: '"Nunito", sans-serif' }}>Loading...</p>
-        </div>
-      </div>
-    );
+  if (items.length === 0 && !success) {
+    navigate('/cookies', { replace: true });
+    return null;
   }
-  if (!user) return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
-  if (items.length === 0 && !success) return <Navigate to="/cookies" replace />;
 
   const canSubmit = shipping.name && shipping.address && shipping.city && shipping.zip && shipping.phone;
 

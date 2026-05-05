@@ -15,18 +15,7 @@ const STORY_IMAGES = [
   'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=400&q=80&fit=crop',
 ];
 
-// Edge positions — none overlap the centred text & button block
-const MOBILE_POSITIONS = [
-  { top: '5%',    left: '3%'   },
-  { top: '5%',    right: '3%'  },
-  { top: '23%',   left: '6%'   },
-  { top: '23%',   right: '6%'  },
-  { bottom: '13%', left: '3%'  },
-  { bottom: '13%', right: '3%' },
-  { top: '40%',   left: '1%'   },
-  { top: '40%',   right: '1%'  },
-] as const;
-const MOBILE_ROTATIONS = [-8, 7, -4, 5, -5, 9, -7, 6] as const;
+
 
 const STORY_CARDS = [
   {
@@ -140,59 +129,166 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-function MobileSlideshow({ images }: { images: string[] }) {
-  // Each entry: { src, pos, rot, id }
-  const [visible, setVisible] = useState<{ src: string; pos: typeof MOBILE_POSITIONS[number]; rot: number; id: number }[]>([]);
-  const counterRef = useRef(0);
-  const imgIdxRef = useRef(0);
-
+function MobileHero({ images, onMenu, onShop, onLogoTap }: { images: string[]; onMenu: () => void; onShop: () => void; onLogoTap: () => void }) {
+  const [idx, setIdx] = useState(0);
   useEffect(() => {
-    if (images.length === 0) return;
-    setVisible([]);
-    counterRef.current = 0;
-    imgIdxRef.current = 0;
-
-    const addNext = () => {
-      setVisible(prev => {
-        const limit = Math.min(images.length, MOBILE_POSITIONS.length);
-        if (prev.length >= limit) return prev;
-
-        const slot = prev.length;
-        const next = [...prev, {
-          src: images[imgIdxRef.current % images.length],
-          pos: MOBILE_POSITIONS[slot],
-          rot: MOBILE_ROTATIONS[slot],
-          id: counterRef.current++,
-        }];
-        imgIdxRef.current++;
-        return next;
-      });
-    };
-
-    addNext();
-    const t = setInterval(addNext, 900);
+    if (images.length < 2) return;
+    const t = setInterval(() => setIdx(i => (i + 1) % images.length), 3200);
     return () => clearInterval(t);
-  }, [images]);
+  }, [images.length]);
 
-  if (images.length === 0) return null;
+  const featured = images[idx] ?? images[0];
+  const thumbs = images.slice(0, 5);
 
   return (
-    <div className="absolute inset-x-0 top-10 bottom-0 pointer-events-none z-0 overflow-hidden lg:hidden">
-      {visible.map(({ src, pos, rot, id }) => (
-        <motion.img
-          key={id}
-          src={src}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          initial={{ opacity: 0, scale: 0.78, rotate: rot - 8 }}
-          animate={{ opacity: 0.85, scale: 1, rotate: rot }}
-          transition={{ duration: 0.55, ease: 'easeOut' }}
-          className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-xl border-2 border-white/30"
-          style={pos}
-        />
-      ))}
-    </div>
+    <section className="md:hidden relative w-full overflow-hidden px-5 pt-6 pb-10" aria-label="Hero">
+      {/* Soft glows */}
+      <div className="absolute -top-20 -right-20 w-[280px] h-[280px] rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--color-blush)', opacity: 0.18 }} aria-hidden="true" />
+      <div className="absolute top-1/3 -left-24 w-[260px] h-[260px] rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--color-accent)', opacity: 0.10 }} aria-hidden="true" />
+
+      {/* Hidden admin tap target — 5 quick taps */}
+      <button
+        onClick={onLogoTap}
+        className="absolute top-2 right-2 w-10 h-10 opacity-0"
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+
+      {/* Eyebrow pill */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
+        style={{ backgroundColor: 'rgba(9,103,216,0.10)', border: '1px solid rgba(9,103,216,0.25)' }}
+      >
+        <span className="text-base leading-none">🍪</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--color-accent)', fontFamily: '"Nunito", sans-serif' }}>
+          Handcrafted · Eggless
+        </span>
+      </motion.div>
+
+      {/* Heading */}
+      <motion.h1
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.05 }}
+        className="relative font-serif font-bold tracking-tight text-ink leading-[0.95] mb-1 select-none"
+        style={{ fontSize: 'clamp(2.6rem, 11vw, 3.6rem)' }}
+      >
+        Fresh Baked,
+      </motion.h1>
+      <motion.p
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.12 }}
+        className="relative font-serif font-light italic tracking-tight text-accent leading-[0.95] mb-4 select-none"
+        style={{ fontSize: 'clamp(2.6rem, 11vw, 3.6rem)' }}
+      >
+        Every Day.
+      </motion.p>
+
+      {/* Tagline */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+        className="relative text-base text-ink/70 mb-6 max-w-sm"
+        style={{ fontFamily: '"Nunito", sans-serif', lineHeight: 1.55 }}
+      >
+        Small-batch eggless cookies, baked the day they ship — straight to your door across India.
+      </motion.p>
+
+      {/* Featured image card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.18 }}
+        className="relative w-full rounded-[28px] overflow-hidden shadow-2xl mb-5"
+        style={{ aspectRatio: '4/5', border: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        {/* image stack with crossfade */}
+        {images.map((src, i) => (
+          <motion.img
+            key={src + i}
+            src={src}
+            alt=""
+            loading={i === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+            initial={false}
+            animate={{ opacity: i === idx ? 1 : 0 }}
+            transition={{ duration: 0.7, ease: 'easeInOut' }}
+          />
+        ))}
+        {/* gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
+        {/* floating badge */}
+        <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-md" style={{ backgroundColor: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.22)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white" style={{ fontFamily: '"Nunito", sans-serif' }}>Baking now</span>
+        </div>
+        {/* caption */}
+        <div className="absolute bottom-4 left-4 right-4">
+          <p className="text-white text-sm font-bold tracking-wide" style={{ fontFamily: '"Fredoka One", cursive' }}>Today's Bake</p>
+          <p className="text-white/80 text-xs mt-0.5" style={{ fontFamily: '"Nunito", sans-serif' }}>Out of the oven · ships fresh</p>
+        </div>
+      </motion.div>
+
+      {/* Thumbnail strip */}
+      <div className="relative flex items-center gap-2.5 mb-6 overflow-x-auto no-scrollbar -mx-1 px-1">
+        {thumbs.map((src, i) => (
+          <button
+            key={i}
+            onClick={() => setIdx(i)}
+            aria-label={`Show image ${i + 1}`}
+            className="shrink-0 rounded-2xl overflow-hidden transition-all"
+            style={{
+              width: 56,
+              height: 56,
+              border: i === idx ? '2px solid var(--color-accent)' : '2px solid rgba(255,255,255,0.08)',
+              transform: i === idx ? 'scale(1)' : 'scale(0.95)',
+              opacity: i === idx ? 1 : 0.7,
+            }}
+          >
+            <img src={src} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+          </button>
+        ))}
+      </div>
+
+      {/* CTAs */}
+      <div className="relative flex flex-col gap-3 mb-7">
+        <button
+          onClick={onShop}
+          className="w-full rounded-full font-bold text-white shadow-lg shadow-accent/25 active:scale-[0.98] transition-transform min-h-[52px]"
+          style={{ backgroundColor: 'var(--color-accent)', fontFamily: '"Nunito", sans-serif', fontSize: '1rem', letterSpacing: '0.02em' }}
+        >
+          Shop Cookies →
+        </button>
+        <button
+          onClick={onMenu}
+          className="w-full rounded-full font-bold active:scale-[0.98] transition-transform min-h-[52px] text-ink"
+          style={{ backgroundColor: 'transparent', border: '1.5px solid rgba(127,127,127,0.35)', fontFamily: '"Nunito", sans-serif', fontSize: '1rem', letterSpacing: '0.02em' }}
+        >
+          See Menu Card
+        </button>
+      </div>
+
+      {/* Trust strip */}
+      <div className="relative grid grid-cols-3 gap-3 pt-5" style={{ borderTop: '1px solid rgba(127,127,127,0.18)' }}>
+        {[
+          { icon: '🥚', label: '100%', sub: 'Eggless' },
+          { icon: '🚚', label: '2000+', sub: 'Locations' },
+          { icon: '⏱️', label: '3–5d', sub: 'Delivery' },
+        ].map((item, i) => (
+          <div key={i} className="flex flex-col items-center text-center">
+            <span className="text-xl mb-1" aria-hidden="true">{item.icon}</span>
+            <span className="text-sm font-bold text-ink" style={{ fontFamily: '"Fredoka One", cursive' }}>{item.label}</span>
+            <span className="text-[10px] uppercase tracking-widest text-ink/55 mt-0.5" style={{ fontFamily: '"Nunito", sans-serif' }}>{item.sub}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -314,15 +410,20 @@ export function Home() {
     >
       {/* Main content — sits on top of the sticky footer */}
       <div className="relative z-[1] bg-bg min-h-[100dvh] flex flex-col">
-      {/* ─── Hero ───────────────────────────────────────────────── */}
-      <section className="relative w-full min-h-[calc(100dvh-6.5rem)] sm:h-[calc(100vh-6rem)] flex flex-col items-center overflow-hidden" aria-label="Hero">
+      {/* ─── Mobile Hero (clean, premium mobile design) ───────── */}
+      <MobileHero
+        images={trailImages}
+        onMenu={openMenu}
+        onShop={() => navigate('/cookies')}
+        onLogoTap={handleLogoTap}
+      />
+
+      {/* ─── Hero (Desktop / tablet only) ──────────────────────── */}
+      <section className="hidden md:flex relative w-full min-h-[calc(100dvh-6.5rem)] sm:h-[calc(100vh-6rem)] flex-col items-center overflow-hidden" aria-label="Hero">
         {/* Background glows */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden sm:block sm:w-[700px] sm:h-[700px] bg-accent/8 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
         <div className="absolute top-0 right-0 hidden sm:block sm:w-[450px] sm:h-[450px] bg-blush/20 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
         <div className="absolute bottom-0 left-0 hidden sm:block sm:w-[400px] sm:h-[400px] bg-blush/10 rounded-full blur-3xl -z-10 pointer-events-none" aria-hidden="true" />
-
-        {/* Mobile Slideshow */}
-        {!isDesktop && <MobileSlideshow images={trailImages} />}
 
         {/* Image Trail — Desktop only */}
         {isDesktop && <div className="absolute inset-0 z-0 hidden lg:block">
@@ -433,8 +534,22 @@ export function Home() {
 
       </div>{/* end main-content z-[1] wrapper */}
 
-      {/* ─── Full-screen horizontal-scroll heading ────────────── */}
-      <div ref={headingOuterRef} className="relative z-[1]" style={{ height: '180vh' }}>
+      {/* ─── Mobile static tagline (replaces heavy 180vh scroll) ── */}
+      <div className="md:hidden relative z-[1] bg-bg px-5 py-14 text-center">
+        <p className="text-[11px] uppercase tracking-[0.25em] text-ink/50 mb-3" style={{ fontFamily: '"Nunito", sans-serif' }}>
+          Now serving
+        </p>
+        <h2 className="font-display leading-[0.95] text-ink" style={{ fontSize: 'clamp(2.4rem, 13vw, 4rem)' }}>
+          That's a nice <span style={{ color: '#1A4FE8' }}>[</span>
+          <span className="inline-block align-middle mx-0.5" style={{ width: '0.85em', height: '0.85em', borderRadius: 14, overflow: 'hidden' }}>
+            <img src="https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&q=80&fit=crop" alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+          </span>
+          <span style={{ color: '#1A4FE8' }}>]</span> cookie
+        </h2>
+      </div>
+
+      {/* ─── Full-screen horizontal-scroll heading (Desktop only) ── */}
+      <div ref={headingOuterRef} className="hidden md:block relative z-[1]" style={{ height: '180vh' }}>
         <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex items-center bg-bg">
           <motion.div
             className="flex items-center whitespace-nowrap select-none pl-[10vw]"

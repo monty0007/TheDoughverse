@@ -406,12 +406,12 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
 
         {/* Right actions */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          {/* WhatsApp support button — hidden on mobile */}
+          {/* WhatsApp support button */}
           <a
             href={getWhatsAppSupportUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-[44px]"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-[44px]"
             style={{ backgroundColor: '#25D366', color: '#fff', fontFamily: '"Nunito", sans-serif' }}
             aria-label="Contact support on WhatsApp"
           >

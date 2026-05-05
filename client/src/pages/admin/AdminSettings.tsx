@@ -1,22 +1,30 @@
 import { useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { MessageCircle, Save, Check } from 'lucide-react';
-import { getWhatsAppNumber, setWhatsAppNumber } from '../../lib/settings';
+import { getWhatsAppLocalNumber, setWhatsAppNumber } from '../../lib/settings';
 
 const BLUE = '#1A4FE8';
 const CREAM = '#F5F0D8';
 
 export function AdminSettings() {
-  const [number, setNumber] = useState(() => getWhatsAppNumber());
-  const [saved, setSaved] = useState(false);
+  const [number, setNumber] = useState(() => getWhatsAppLocalNumber());
+  const [saved, setSaved] = useState(true); // starts as saved (showing current stored value)
+  const [error, setError] = useState(false);
+
+  const handleChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 10);
+    setNumber(digits);
+    setSaved(false);
+    setError(false);
+  };
 
   const handleSave = () => {
-    const cleaned = number.replace(/\D/g, '');
-    if (!cleaned) return;
-    setWhatsAppNumber(cleaned);
-    setNumber(cleaned);
+    const digits = number.replace(/\D/g, '');
+    if (digits.length !== 10) { setError(true); return; }
+    setWhatsAppNumber(digits);
+    setNumber(digits);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setError(false);
   };
 
   return (
@@ -67,37 +75,52 @@ export function AdminSettings() {
             className="block text-[10px] uppercase tracking-widest font-bold mb-2"
             style={{ color: BLUE, opacity: 0.45, fontFamily: '"Nunito", sans-serif' }}
           >
-            Number (with country code, digits only)
+            Phone number
           </label>
           <div className="flex gap-3">
+            {/* Fixed +91 prefix */}
+            <div
+              className="flex items-center px-4 py-3 rounded-xl text-sm font-bold select-none shrink-0"
+              style={{ border: '1.5px solid rgba(26,79,232,0.15)', color: BLUE, fontFamily: '"Nunito", sans-serif', backgroundColor: 'rgba(26,79,232,0.04)' }}
+            >
+              +91
+            </div>
             <input
               type="tel"
               value={number}
-              onChange={(e) => { setNumber(e.target.value); setSaved(false); }}
-              placeholder="919999999999"
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="9876543210"
+              maxLength={10}
               className="flex-1 px-4 py-3 rounded-xl text-sm outline-none focus:ring-2"
               style={{
-                border: '1.5px solid rgba(26,79,232,0.15)',
+                border: `1.5px solid ${error ? '#EF4444' : 'rgba(26,79,232,0.15)'}`,
                 color: BLUE,
                 fontFamily: '"Nunito", sans-serif',
               }}
             />
             <button
               onClick={handleSave}
-              disabled={!number.replace(/\D/g, '')}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95 disabled:opacity-40"
+              disabled={saved}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95 disabled:opacity-60"
               style={{ backgroundColor: saved ? '#2ECC71' : BLUE, fontFamily: '"Nunito", sans-serif' }}
             >
               {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
               {saved ? 'Saved' : 'Save'}
             </button>
           </div>
+          {error && (
+            <p className="text-[11px] mt-2 font-bold" style={{ color: '#EF4444', fontFamily: '"Nunito", sans-serif' }}>
+              Wrong number — must be exactly 10 digits.
+            </p>
+          )}
+          {!error && (
           <p
             className="text-[11px] mt-3"
             style={{ color: BLUE, opacity: 0.4, fontFamily: '"Nunito", sans-serif' }}
           >
-            Example: <span className="font-bold">919876543210</span> for +91 98765 43210
+            Enter the 10-digit number. <span className="font-bold">+91</span> is added automatically.
           </p>
+          )}
         </div>
       </div>
     </AdminLayout>

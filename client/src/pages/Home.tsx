@@ -138,7 +138,6 @@ function MobileHero({ images, onMenu, onShop, onLogoTap }: { images: string[]; o
   }, [images.length]);
 
   const featured = images[idx] ?? images[0];
-  const thumbs = images.slice(0, 5);
 
   return (
     <section className="md:hidden relative w-full overflow-hidden px-5 pt-6 pb-10" aria-label="Hero">
@@ -235,26 +234,6 @@ function MobileHero({ images, onMenu, onShop, onLogoTap }: { images: string[]; o
         </div>
       </motion.div>
 
-      {/* Thumbnail strip */}
-      <div className="relative flex items-center gap-2.5 mb-6 overflow-x-auto no-scrollbar -mx-1 px-1">
-        {thumbs.map((src, i) => (
-          <button
-            key={i}
-            onClick={() => setIdx(i)}
-            aria-label={`Show image ${i + 1}`}
-            className="shrink-0 rounded-2xl overflow-hidden transition-all"
-            style={{
-              width: 56,
-              height: 56,
-              border: i === idx ? '2px solid var(--color-accent)' : '2px solid rgba(255,255,255,0.08)',
-              transform: i === idx ? 'scale(1)' : 'scale(0.95)',
-              opacity: i === idx ? 1 : 0.7,
-            }}
-          >
-            <img src={src} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-          </button>
-        ))}
-      </div>
 
       {/* CTAs */}
       <div className="relative flex flex-col gap-3 mb-7">
@@ -536,15 +515,8 @@ export function Home() {
 
       {/* ─── Mobile static tagline (replaces heavy 180vh scroll) ── */}
       <div className="md:hidden relative z-[1] bg-bg px-5 py-14 text-center">
-        <p className="text-[11px] uppercase tracking-[0.25em] text-ink/50 mb-3" style={{ fontFamily: '"Nunito", sans-serif' }}>
-          Now serving
-        </p>
         <h2 className="font-display leading-[0.95] text-ink" style={{ fontSize: 'clamp(2.4rem, 13vw, 4rem)' }}>
-          That's a nice <span style={{ color: '#1A4FE8' }}>[</span>
-          <span className="inline-block align-middle mx-0.5" style={{ width: '0.85em', height: '0.85em', borderRadius: 14, overflow: 'hidden' }}>
-            <img src="https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&q=80&fit=crop" alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-          </span>
-          <span style={{ color: '#1A4FE8' }}>]</span> cookie
+          That's a nice c<span style={{ color: '#1A4FE8' }}>[</span><span className="inline-flex items-center gap-px align-middle" style={{ verticalAlign: '-0.1em' }}><img src="/favicon.svg" alt="" aria-hidden="true" style={{ width: '0.72em', height: '0.72em', display: 'inline-block' }} /><img src="/favicon.svg" alt="" aria-hidden="true" style={{ width: '0.72em', height: '0.72em', display: 'inline-block' }} /></span><span style={{ color: '#1A4FE8' }}>]</span>kie
         </h2>
       </div>
 

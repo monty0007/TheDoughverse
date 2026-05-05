@@ -5,6 +5,7 @@ import { ShoppingBag, Package, ArrowLeft, Clock, Check, X } from 'lucide-react';
 import { useFirebaseAuth } from '../store/useFirebaseAuth';
 import { getFirebaseAuth } from '../lib/firebase';
 import { API_BASE } from '../lib/api';
+import { getProductImage, getFallbackProductImage } from '../lib/productImages';
 
 const BLUE = '#1A4FE8';
 const CREAM = '#FFFCDC';
@@ -141,7 +142,12 @@ export function Orders() {
                   <div className="flex flex-wrap gap-2 mb-5">
                     {order.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-2 bg-ink/5 rounded-xl px-3 py-2">
-                        <img src={item.image} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                        <img
+                          src={getProductImage(item)}
+                          alt=""
+                          className="w-8 h-8 rounded-lg object-cover"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = getFallbackProductImage(item); }}
+                        />
                         <div>
                           <p className="text-xs font-bold" style={{ color: BLUE }}>{item.name}</p>
                           <p className="text-[10px]" style={{ color: BLUE, opacity: 0.4 }}>×{item.quantity}</p>

@@ -342,7 +342,7 @@ export function Home() {
           <div className="relative w-full h-full overflow-hidden">
 
             {/* Card 0 */}
-            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20">
+            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-20">
                 <motion.div className="flex-1" style={{ y: c0tY, opacity: c0tO }}>
                   <p className="text-sm uppercase tracking-widest mb-3 sm:mb-5" style={{ color: '#C4752A', fontFamily: '"Fredoka One", cursive' }}>01</p>
@@ -357,7 +357,7 @@ export function Home() {
                   </p>
                   <button
                     onClick={() => navigate('/cookies')}
-                    className="rounded-full transition-all hover:brightness-110 active:scale-95 min-h-[44px]"
+                    className="pointer-events-auto rounded-full transition-all hover:brightness-110 active:scale-95 min-h-[44px]"
                     style={{ padding: '12px 28px', backgroundColor: '#C4752A', color: '#FFF8EE', fontFamily: '"Nunito", sans-serif', fontWeight: 700, fontSize: '1rem', borderRadius: 999 }}
                   >
                     See our cookies →
@@ -370,7 +370,7 @@ export function Home() {
             </div>
 
             {/* Card 1 */}
-            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20">
+            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col-reverse md:flex-row items-center gap-6 md:gap-20">
                 <motion.div className="w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c1iX, opacity: c1iO, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src="https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&q=80&fit=crop" alt="Cookie packaging" loading="lazy" decoding="async" className="w-full h-full object-cover" />
@@ -388,7 +388,7 @@ export function Home() {
                   </p>
                   <button
                     onClick={() => navigate('/cookies')}
-                    className="rounded-full transition-all hover:brightness-110 active:scale-95 min-h-[44px]"
+                    className="pointer-events-auto rounded-full transition-all hover:brightness-110 active:scale-95 min-h-[44px]"
                     style={{ padding: '12px 28px', backgroundColor: '#C4752A', color: '#FFF8EE', fontFamily: '"Nunito", sans-serif', fontWeight: 700, fontSize: '1rem', borderRadius: 999 }}
                   >
                     Check our flavours
@@ -398,7 +398,7 @@ export function Home() {
             </div>
 
             {/* Card 2 */}
-            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20">
+            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-20">
                 <motion.div className="flex-1" style={{ y: c2tY, opacity: c2tO }}>
                   <p className="text-sm uppercase tracking-widest mb-3 sm:mb-5" style={{ color: '#C4752A', fontFamily: '"Fredoka One", cursive' }}>03</p>
@@ -413,7 +413,7 @@ export function Home() {
                   </p>
                   <button
                     onClick={() => navigate('/cookies')}
-                    className="rounded-full transition-all hover:brightness-110 active:scale-95 min-h-[44px]"
+                    className="pointer-events-auto rounded-full transition-all hover:brightness-110 active:scale-95 min-h-[44px]"
                     style={{ padding: '12px 28px', backgroundColor: '#C4752A', color: '#FFF8EE', fontFamily: '"Nunito", sans-serif', fontWeight: 700, fontSize: '1rem', borderRadius: 999 }}
                   >
                     Shop Cookies
@@ -426,7 +426,7 @@ export function Home() {
             </div>
 
             {/* Card 3 */}
-            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20">
+            <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col-reverse md:flex-row items-center gap-6 md:gap-20">
                 <motion.div className="w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c3iX, opacity: c3iO, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src="https://images.unsplash.com/photo-1607478900766-efe13248b125?w=600&q=80&fit=crop" alt="Assorted cookies" loading="lazy" decoding="async" className="w-full h-full object-cover" />

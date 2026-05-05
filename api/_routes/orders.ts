@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { query } from '../_lib/db';
-import { firebaseAdmin } from '../_lib/firebase';
-import { rateLimit } from '../_middleware/security';
+import { query } from '../_lib/db.js';
+import { firebaseAdmin } from '../_lib/firebase.js';
+import { rateLimit } from '../_middleware/security.js';
 
 const router = Router();
 const orderCreateLimiter = rateLimit('order-create', 60 * 1000, 20);

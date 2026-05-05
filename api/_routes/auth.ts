@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
-import { requireAuth } from '../_middleware/auth';
-import { getAdminCookieOptions, rateLimit } from '../_middleware/security';
+import { requireAuth } from '../_middleware/auth.js';
+import { getAdminCookieOptions, rateLimit } from '../_middleware/security.js';
 
 const router = Router();
 const loginLimiter = rateLimit('admin-login', 15 * 60 * 1000, 5);

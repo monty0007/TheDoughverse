@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { query } from '../_lib/db';
-import { rateLimit } from '../_middleware/security';
+import { query } from '../_lib/db.js';
+import { rateLimit } from '../_middleware/security.js';
 
 const router = Router();
 

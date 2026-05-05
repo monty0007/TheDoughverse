@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { query } from '../_lib/db';
-import { firebaseAdmin } from '../_lib/firebase';
+import { query } from '../_lib/db.js';
+import { firebaseAdmin } from '../_lib/firebase.js';
 
 const router = Router();
 

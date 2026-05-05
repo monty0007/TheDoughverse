@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { firebaseAdmin } from '../_lib/firebase';
+import { firebaseAdmin } from '../_lib/firebase.js';
 
 const router = Router();
 

@@ -1,9 +1,9 @@
 import { Router, Request } from 'express';
 import multer from 'multer';
-import { query } from '../_lib/db';
-import { requireAuth } from '../_middleware/auth';
-import { uploadToAzure } from '../_lib/azureStorage';
-import { validateUploadedImage } from '../_lib/imageValidation';
+import { query } from '../_lib/db.js';
+import { requireAuth } from '../_middleware/auth.js';
+import { uploadToAzure } from '../_lib/azureStorage.js';
+import { validateUploadedImage } from '../_lib/imageValidation.js';
 
 const router = Router();
 

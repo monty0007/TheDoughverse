@@ -1,16 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { isAllowedOrigin, normalizeAllowedOrigins, rateLimit, requireTrustedOrigin, securityHeaders } from './_middleware/security';
+import { isAllowedOrigin, normalizeAllowedOrigins, rateLimit, requireTrustedOrigin, securityHeaders } from './_middleware/security.js';
 
-import authRoutes from './_routes/auth';
-import imageRoutes from './_routes/images';
-import tagRoutes from './_routes/tags';
-import adminRoutes from './_routes/admin';
-import userRoutes from './_routes/user';
-import orderRoutes from './_routes/orders';
-import favouriteRoutes from './_routes/favourites';
-import productRoutes from './_routes/products';
+import authRoutes from './_routes/auth.js';
+import imageRoutes from './_routes/images.js';
+import tagRoutes from './_routes/tags.js';
+import adminRoutes from './_routes/admin.js';
+import userRoutes from './_routes/user.js';
+import orderRoutes from './_routes/orders.js';
+import favouriteRoutes from './_routes/favourites.js';
+import productRoutes from './_routes/products.js';
 
 const app = express();
 

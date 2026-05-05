@@ -2,15 +2,21 @@ import { BlobServiceClient } from '@azure/storage-blob';
 import crypto from 'crypto';
 import path from 'path';
 
+
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'images';
 
-function getContainerClient() {
-    if (!connectionString) {
-        throw new Error('AZURE_STORAGE_CONNECTION_STRING is not defined');
-    }
-    const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-    return blobServiceClient.getContainerClient(containerName);
+if (!connectionString) {
+    throw new Error('AZURE_STORAGE_CONNECTION_STRING is not defined');
+}
+
+const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+const containerClient = blobServiceClient.getContainerClient(containerName);
+
+// Ensure container exists AND has public blob access
+export async function ensureContainer() {
+    await containerClient.createIfNotExists();
+    await containerClient.setAccessPolicy('blob');
 }
 
 export async function uploadToAzure(
@@ -18,7 +24,6 @@ export async function uploadToAzure(
     originalName: string,
     mimeType: string
 ): Promise<{ storageKey: string; url: string }> {
-    const containerClient = getContainerClient();
     const ext = path.extname(originalName);
     const blobName = `images/${crypto.randomUUID()}${ext}`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -34,7 +39,6 @@ export async function uploadToAzure(
 }
 
 export async function deleteFromAzure(blobName: string): Promise<void> {
-    const containerClient = getContainerClient();
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     await blockBlobClient.deleteIfExists();
 }

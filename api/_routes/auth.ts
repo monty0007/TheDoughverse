@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import { rateLimit } from '../_middleware/rateLimit.js';
 import { requireAuth } from '../_middleware/auth.js';
-import { getAdminCookieOptions, rateLimit } from '../_middleware/security.js';
+import { getAdminCookieOptions } from '../_middleware/security.js';
 
 const router = Router();
-const loginLimiter = rateLimit('admin-login', 15 * 60 * 1000, 5);
+
+// Rate limit login attempts: 5 per 15 minutes
+const loginLimiter = rateLimit('login', 15 * 60 * 1000, 5);
 
 // POST /api/auth/login
 router.post('/login', loginLimiter, (req, res) => {
@@ -29,7 +32,7 @@ router.post('/logout', (_req, res) => {
     return res.json({ ok: true });
 });
 
-// GET /api/auth/verify
+// GET /api/auth/verify — check if session cookie is valid
 router.get('/verify', requireAuth, (_req, res) => {
     return res.json({ ok: true });
 });

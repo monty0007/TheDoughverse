@@ -138,9 +138,8 @@ function MobilePageNav({ hidden }: { hidden: boolean }) {
       style={{
         top: '4rem',
         transform: hidden ? 'translateY(calc(-4rem - 100%))' : 'translateY(0)',
-        backgroundColor: 'var(--theme-bg)',
-        borderTop: '1px solid color-mix(in srgb, var(--theme-accent) 8%, transparent)',
-        borderBottom: '2px solid color-mix(in srgb, var(--theme-accent) 12%, transparent)',
+        backgroundColor: '#1A4FE8',
+        borderBottom: '1px solid rgba(255,252,220,0.15)',
       }}
       aria-label="Quick navigation"
     >
@@ -152,7 +151,7 @@ function MobilePageNav({ hidden }: { hidden: boolean }) {
             to={to}
             className="flex-1 text-center font-mono text-[10px] uppercase tracking-widest py-1 transition-colors"
             style={{
-              color: active ? 'var(--theme-accent)' : 'color-mix(in srgb, var(--theme-accent) 45%, transparent)',
+              color: active ? '#FFFCDC' : 'rgba(255,252,220,0.55)',
               fontWeight: active ? 700 : 500,
             }}
             aria-current={active ? 'page' : undefined}

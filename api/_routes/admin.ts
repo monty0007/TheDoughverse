@@ -20,7 +20,8 @@ const upload = multer({
     },
 });
 
-function slugify(name: string): string {
+// Helper: generate slug from name
+export function slugify(name: string): string {
     return name
         .toLowerCase()
         .trim()
@@ -29,7 +30,7 @@ function slugify(name: string): string {
         .replace(/-+/g, '-');
 }
 
-// GET /api/admin/images
+// GET /api/admin/images — all images including drafts/deleted
 router.get('/images', async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -51,13 +52,13 @@ router.get('/images', async (req, res) => {
 
         const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-        const countResult = await query(`SELECT COUNT(*) FROM images i ${where}`);
+        const countResult = await query(`SELECT COUNT(*) as count FROM images i ${where}`);
         const total = parseInt(countResult.rows[0].count);
 
         const result = await query(
             `SELECT i.*,
         COALESCE(
-          (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'slug', t.slug))
+          (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'slug', t.slug))
            FROM image_tags it JOIN tags t ON t.id = it.tag_id WHERE it.image_id = i.id), '[]'
         ) as tags
        FROM images i
@@ -80,21 +81,17 @@ router.get('/images', async (req, res) => {
 // POST /api/admin/upload — upload a product image to Azure, returns URL
 router.post('/upload', upload.single('image'), async (req: Request, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Image file is required' });
-        }
-
+        if (!req.file) return res.status(400).json({ error: 'Image file is required' });
         let image;
         try {
             image = validateUploadedImage(req.file);
         } catch {
             return res.status(400).json({ error: 'Unsupported or invalid image file' });
         }
-
         const { storageKey, url } = await uploadToAzure(req.file.buffer, image.fileName, image.mimeType);
         return res.status(201).json({ url, key: storageKey });
     } catch (err) {
-        console.error('Error uploading product image:', err);
+        console.error('Error uploading image:', err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -119,8 +116,10 @@ router.post('/images', upload.single('image'), async (req: Request, res) => {
             return res.status(400).json({ error: 'Unsupported or invalid image file' });
         }
 
+        // Upload to Azure
         const { storageKey, url } = await uploadToAzure(req.file.buffer, image.fileName, image.mimeType);
 
+        // Insert image
         const published = is_published === 'true' || is_published === true;
         const result = await query(
             `INSERT INTO images (title, prompt, model, r2_key, url, is_published)
@@ -130,10 +129,12 @@ router.post('/images', upload.single('image'), async (req: Request, res) => {
 
         const imageId = result.rows[0].id;
 
+        // Handle tags
         if (tags) {
             const tagNames = (tags as string).split(',').map((s: string) => s.trim()).filter(Boolean);
             for (const name of tagNames) {
                 const slug = slugify(name);
+                // Create tag if it doesn't exist
                 await query(
                     `INSERT INTO tags (name, slug) VALUES ($1, $2) ON CONFLICT (slug) DO NOTHING`,
                     [name, slug]
@@ -155,7 +156,7 @@ router.post('/images', upload.single('image'), async (req: Request, res) => {
     }
 });
 
-// PATCH /api/admin/images/:id
+// PATCH /api/admin/images/:id — update image metadata
 router.patch('/images/:id', async (req, res) => {
     try {
         const { title, prompt, model, tags, is_published } = req.body;
@@ -168,7 +169,7 @@ router.patch('/images/:id', async (req, res) => {
         if (model !== undefined) { updates.push(`model = $${paramIdx++}`); params.push(model); }
         if (is_published !== undefined) { updates.push(`is_published = $${paramIdx++}`); params.push(is_published); }
 
-        updates.push(`updated_at = NOW()`);
+        updates.push(`updated_at = datetime('now')`);
 
         if (updates.length === 1) {
             return res.status(400).json({ error: 'No fields to update' });
@@ -184,6 +185,7 @@ router.patch('/images/:id', async (req, res) => {
             return res.status(404).json({ error: 'Image not found' });
         }
 
+        // Update tags if provided
         if (tags !== undefined) {
             await query('DELETE FROM image_tags WHERE image_id = $1', [req.params.id]);
             const tagNames = (tags as string).split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -214,7 +216,7 @@ router.patch('/images/:id', async (req, res) => {
 router.delete('/images/:id', async (req, res) => {
     try {
         const result = await query(
-            'UPDATE images SET is_deleted = true, updated_at = NOW() WHERE id = $1 RETURNING id',
+            'UPDATE images SET is_deleted = 1, updated_at = datetime(\'now\') WHERE id = $1 RETURNING id',
             [req.params.id]
         );
 
@@ -229,7 +231,7 @@ router.delete('/images/:id', async (req, res) => {
     }
 });
 
-// POST /api/admin/tags
+// POST /api/admin/tags — create tag
 router.post('/tags', async (req, res) => {
     try {
         const { name } = req.body;
@@ -245,7 +247,7 @@ router.post('/tags', async (req, res) => {
 
         return res.status(201).json(result.rows[0]);
     } catch (err: any) {
-        if (err.code === '23505') {
+        if (err.message?.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'Tag already exists' });
         }
         console.error('Error creating tag:', err);
@@ -253,7 +255,7 @@ router.post('/tags', async (req, res) => {
     }
 });
 
-// PATCH /api/admin/tags/:id
+// PATCH /api/admin/tags/:id — rename tag
 router.patch('/tags/:id', async (req, res) => {
     try {
         const { name } = req.body;
@@ -273,7 +275,7 @@ router.patch('/tags/:id', async (req, res) => {
 
         return res.json(result.rows[0]);
     } catch (err: any) {
-        if (err.code === '23505') {
+        if (err.message?.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'Tag name already exists' });
         }
         console.error('Error updating tag:', err);
@@ -285,7 +287,7 @@ router.patch('/tags/:id', async (req, res) => {
 router.delete('/tags/:id', async (req, res) => {
     try {
         const usage = await query(
-            'SELECT COUNT(*) FROM image_tags WHERE tag_id = $1',
+            'SELECT COUNT(*) as count FROM image_tags WHERE tag_id = $1',
             [req.params.id]
         );
 
@@ -301,7 +303,9 @@ router.delete('/tags/:id', async (req, res) => {
     }
 });
 
-// GET /api/admin/products — all products for admin
+// ─── Cookie Products ──────────────────────────────────────────────────────────
+
+// GET /api/admin/products — all products
 router.get('/products', async (_req, res) => {
     try {
         const result = await query('SELECT * FROM cookie_products ORDER BY sort_order ASC, created_at ASC');
@@ -315,28 +319,18 @@ router.get('/products', async (_req, res) => {
 // POST /api/admin/products — create product
 router.post('/products', async (req, res) => {
     const { name, description, price, image, category, badge, sort_order, is_limited, quantity } = req.body;
-
     if (!name || price === undefined) {
         return res.status(400).json({ error: 'name and price are required' });
     }
-
     try {
+        const limited = is_limited ? 1 : 0;
+        const qty = is_limited && quantity != null ? parseInt(quantity) : null;
         const result = await query(
             `INSERT INTO cookie_products (name, description, price, image, category, badge, sort_order, is_limited, quantity)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [
-                name,
-                description || '',
-                Number(price),
-                image || '',
-                category || 'Classic',
-                badge || null,
-                Number(sort_order) || 0,
-                Boolean(is_limited),
-                is_limited && quantity != null ? Number(quantity) : null,
-            ]
+            [name, description || '', price, image || '', category || 'Classic', badge || null, sort_order ?? 0, limited, qty]
         );
-        return res.status(201).json(result.rows[0]);
+        return res.json(result.rows[0]);
     } catch (err) {
         console.error('Error creating product:', err);
         return res.status(500).json({ error: 'Internal server error' });
@@ -356,17 +350,17 @@ router.patch('/products/:id', async (req, res) => {
 
     if (name !== undefined) addUpdate('name', name);
     if (description !== undefined) addUpdate('description', description);
-    if (price !== undefined) addUpdate('price', Number(price));
+    if (price !== undefined) addUpdate('price', price);
     if (image !== undefined) addUpdate('image', image);
     if (category !== undefined) addUpdate('category', category);
     if (badge !== undefined) addUpdate('badge', badge || null);
-    if (sort_order !== undefined) addUpdate('sort_order', Number(sort_order) || 0);
-    if (is_active !== undefined) addUpdate('is_active', Boolean(is_active));
+    if (sort_order !== undefined) addUpdate('sort_order', sort_order);
+    if (is_active !== undefined) addUpdate('is_active', is_active ? 1 : 0);
     if (is_limited !== undefined) {
-        addUpdate('is_limited', Boolean(is_limited));
-        addUpdate('quantity', is_limited && quantity != null ? Number(quantity) : null);
+        addUpdate('is_limited', is_limited ? 1 : 0);
+        addUpdate('quantity', is_limited && quantity != null ? parseInt(quantity) : null);
     } else if (quantity !== undefined) {
-        addUpdate('quantity', quantity != null ? Number(quantity) : null);
+        addUpdate('quantity', quantity != null ? parseInt(quantity) : null);
     }
 
     if (updates.length === 0) {
@@ -376,14 +370,10 @@ router.patch('/products/:id', async (req, res) => {
     try {
         params.push(req.params.id);
         const result = await query(
-            `UPDATE cookie_products SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${params.length} RETURNING *`,
+            `UPDATE cookie_products SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = $${params.length} RETURNING *`,
             params
         );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
         return res.json(result.rows[0]);
     } catch (err) {
         console.error('Error updating product:', err);
@@ -402,18 +392,18 @@ router.delete('/products/:id', async (req, res) => {
     }
 });
 
-// GET /api/admin/stats
+// GET /api/admin/stats — dashboard analytics
 router.get('/stats', async (_req, res) => {
     try {
         const stats = await query(`
       SELECT
-        (SELECT COUNT(*) FROM images WHERE is_deleted = false) as total_images,
-        (SELECT COUNT(*) FROM images WHERE is_published = true AND is_deleted = false) as total_published,
+        (SELECT COUNT(*) FROM images WHERE is_deleted = 0) as total_images,
+        (SELECT COUNT(*) FROM images WHERE is_published = 1 AND is_deleted = 0) as total_published,
         (SELECT COALESCE(SUM(like_count), 0) FROM images) as total_likes,
         (SELECT COALESCE(SUM(copy_count), 0) FROM images) as total_copies,
-        (SELECT COUNT(*) FROM prompt_copies WHERE created_at > NOW() - INTERVAL '7 days') as copies_this_week,
-        (SELECT COUNT(*) FROM likes WHERE created_at > NOW() - INTERVAL '7 days') as likes_this_week,
-        (SELECT COUNT(*) FROM images WHERE created_at > NOW() - INTERVAL '7 days' AND is_deleted = false) as uploads_this_week
+        (SELECT COUNT(*) FROM prompt_copies WHERE created_at > datetime('now', '-7 days')) as copies_this_week,
+        (SELECT COUNT(*) FROM likes WHERE created_at > datetime('now', '-7 days')) as likes_this_week,
+        (SELECT COUNT(*) FROM images WHERE created_at > datetime('now', '-7 days') AND is_deleted = 0) as uploads_this_week
     `);
 
         return res.json(stats.rows[0]);

@@ -3,171 +3,220 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { query } from '../_lib/db.js';
 import { firebaseAdmin } from '../_lib/firebase.js';
-import { rateLimit } from '../_middleware/security.js';
+import { rateLimit } from '../_middleware/rateLimit.js';
+import { requireAuth } from '../_middleware/auth.js';
 
 const router = Router();
 const orderCreateLimiter = rateLimit('order-create', 60 * 1000, 20);
 const orderVerifyLimiter = rateLimit('order-verify', 60 * 1000, 30);
 const whaSubmitLimiter = rateLimit('wa-order-submit', 60 * 1000, 10);
 
-let razorpay: Razorpay;
-function getRazorpay() {
-    if (!razorpay) {
-        razorpay = new Razorpay({
-            key_id: process.env.RAZORPAY_KEY_ID!,
-            key_secret: process.env.RAZORPAY_KEY_SECRET!,
-        });
-    }
-    return razorpay;
-}
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
+// Generate order number: meow#XXXX
 function generateOrderNumber(): string {
-    const num = Math.floor(1000 + Math.random() * 9000);
-    return `meow#${num}`;
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `meow#${num}`;
 }
 
+// Middleware: extract Firebase UID from Authorization header (optional — guest orders have no uid)
 async function optionalFirebaseAuth(req: Request, res: Response, next: Function) {
-    const auth = req.headers.authorization;
-    if (auth?.startsWith('Bearer ')) {
-        try {
-            const decoded = await firebaseAdmin.auth().verifyIdToken(auth.slice(7));
-            (req as any).uid = decoded.uid;
-        } catch {
-            // ignore invalid token — allow guest orders
-        }
-    }
-    next();
-}
-
-async function authMiddleware(req: Request, res: Response, next: Function) {
-    const auth = req.headers.authorization;
-    if (!auth?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
     try {
-        const decoded = await firebaseAdmin.auth().verifyIdToken(auth.slice(7));
-        (req as any).uid = decoded.uid;
-        next();
+      const decoded = await firebaseAdmin.auth().verifyIdToken(auth.slice(7));
+      (req as any).uid = decoded.uid;
     } catch {
-        return res.status(401).json({ error: 'Invalid token' });
+      // ignore invalid token for guest orders
     }
+  }
+  next();
 }
 
-// GET /api/orders/razorpay-key
-router.get('/razorpay-key', (_req: Request, res: Response) => {
-    res.json({ key: process.env.RAZORPAY_KEY_ID });
-});
+// Middleware: extract Firebase UID from Authorization header
+async function authMiddleware(req: Request, res: Response, next: Function) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const decoded = await firebaseAdmin.auth().verifyIdToken(auth.slice(7));
+    (req as any).uid = decoded.uid;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
-// POST /api/orders/create
-router.post('/create', orderCreateLimiter, authMiddleware, async (req: Request, res: Response) => {
-    const { items, amount, currency = 'INR', shipping } = req.body;
-    const uid = (req as any).uid;
-
-    if (!items?.length || !amount || amount < 100) {
-        return res.status(400).json({ error: 'Invalid order data' });
-    }
-
-    try {
-        const rzOrder = await getRazorpay().orders.create({
-            amount,
-            currency,
-            receipt: `order_${Date.now()}`,
-        });
-
-        await query(
-            `INSERT INTO orders (firebase_uid, razorpay_order_id, amount, currency, status, items, shipping)
-       VALUES ($1, $2, $3, $4, 'created', $5, $6)`,
-            [uid, rzOrder.id, amount, currency, JSON.stringify(items), shipping ? JSON.stringify(shipping) : null]
-        );
-
-        return res.json({
-            orderId: rzOrder.id,
-            amount: rzOrder.amount,
-            currency: rzOrder.currency,
-        });
-    } catch (err: any) {
-        console.error('Order create error:', err);
-        return res.status(500).json({ error: 'Failed to create order' });
-    }
-});
-
-// POST /api/orders/verify
-router.post('/verify', orderVerifyLimiter, authMiddleware, async (req: Request, res: Response) => {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        return res.status(400).json({ error: 'Missing payment details' });
-    }
-
-    const body = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-        .update(body)
-        .digest('hex');
-
-    if (expectedSignature !== razorpay_signature) {
-        return res.status(400).json({ error: 'Invalid payment signature' });
-    }
-
-    try {
-        await query(
-            `UPDATE orders SET status = 'paid', razorpay_payment_id = $1, updated_at = datetime('now')
-       WHERE razorpay_order_id = $2`,
-            [razorpay_payment_id, razorpay_order_id]
-        );
-
-        return res.json({ ok: true, message: 'Payment verified' });
-    } catch (err) {
-        console.error('Payment verify error:', err);
-        return res.status(500).json({ error: 'Failed to verify payment' });
-    }
-});
-
-// POST /api/orders/whatsapp — save a WhatsApp-based order to DB (guest + logged-in)
+// ── WhatsApp order submit (guest + logged-in) ──────────────────────────────
+// POST /api/orders/whatsapp — save a WhatsApp-based order to DB
 router.post('/whatsapp', whaSubmitLimiter, optionalFirebaseAuth, async (req: Request, res: Response) => {
-    const { items, shipping, total } = req.body;
-    const uid = (req as any).uid ?? ''; // empty string satisfies NOT NULL for guest orders
+  const { items, shipping, total } = req.body;
+  const uid = (req as any).uid ?? ''; // empty string satisfies NOT NULL for guest orders
 
-    if (!items?.length || !shipping?.name || !total) {
-        return res.status(400).json({ error: 'Invalid order data' });
-    }
+  if (!items?.length || !shipping?.name || !total) {
+    return res.status(400).json({ error: 'Invalid order data' });
+  }
 
-    // Ensure a unique order number
-    let orderNumber = generateOrderNumber();
-    for (let i = 0; i < 5; i++) {
-        const existing = await query('SELECT id FROM orders WHERE order_number = $1', [orderNumber]);
-        if (!existing.rows.length) break;
-        orderNumber = generateOrderNumber();
-    }
+  // Ensure unique order number
+  let orderNumber = generateOrderNumber();
+  for (let i = 0; i < 5; i++) {
+    const existing = await query('SELECT id FROM orders WHERE order_number = $1', [orderNumber]);
+    if (!existing.rows.length) break;
+    orderNumber = generateOrderNumber();
+  }
 
-    try {
-        const result = await query(
-            `INSERT INTO orders (firebase_uid, order_number, amount, currency, status, admin_status, items, shipping)
+  try {
+    const result = await query(
+      `INSERT INTO orders (firebase_uid, order_number, amount, currency, status, admin_status, items, shipping)
        VALUES ($1, $2, $3, 'INR', 'paid', 'pending', $4, $5)
        RETURNING id, order_number`,
-            [uid, orderNumber, Math.round(total * 100), JSON.stringify(items), JSON.stringify(shipping)]
-        );
-        return res.json({ ok: true, orderNumber: result.rows[0].order_number, id: result.rows[0].id });
-    } catch (err: any) {
-        console.error('WhatsApp order save error:', err);
-        return res.status(500).json({ error: 'Failed to save order' });
-    }
+      [uid, orderNumber, Math.round(total * 100), JSON.stringify(items), JSON.stringify(shipping)]
+    );
+    return res.json({ ok: true, orderNumber, id: result.rows[0].id });
+  } catch (err: any) {
+    console.error('WhatsApp order save error:', err);
+    return res.status(500).json({ error: 'Failed to save order' });
+  }
 });
 
-// GET /api/orders/history
+// ── Admin: list all orders ──────────────────────────────────────────────────
+// GET /api/orders/admin/all
+router.get('/admin/all', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT id, firebase_uid, order_number, amount, currency, status, admin_status, items, shipping, created_at
+       FROM orders ORDER BY created_at DESC LIMIT 200`
+    );
+    const rows = result.rows.map((r: any) => ({
+      ...r,
+      items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,
+      shipping: r.shipping && typeof r.shipping === 'string' ? JSON.parse(r.shipping) : r.shipping,
+    }));
+    return res.json(rows);
+  } catch (err) {
+    console.error('Admin orders list error:', err);
+    return res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+// ── Admin: update admin_status ─────────────────────────────────────────────
+// PATCH /api/orders/admin/:id/status
+router.patch('/admin/:id/status', requireAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { admin_status } = req.body;
+  const allowed = ['pending', 'accepted', 'rejected', 'fulfilled'];
+  if (!allowed.includes(admin_status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+  try {
+    await query(
+      `UPDATE orders SET admin_status = $1, updated_at = datetime('now') WHERE id = $2`,
+      [admin_status, id]
+    );
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Admin status update error:', err);
+    return res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// GET /api/orders/razorpay-key — serve Razorpay key ID to frontend
+router.get('/razorpay-key', (_req: Request, res: Response) => {
+  res.json({ key: process.env.RAZORPAY_KEY_ID });
+});
+
+// POST /api/orders/create — create Razorpay order + DB record
+router.post('/create', orderCreateLimiter, authMiddleware, async (req: Request, res: Response) => {
+  const { items, amount, currency = 'INR', shipping } = req.body;
+  const uid = (req as any).uid;
+
+  if (!items?.length || !amount || amount < 100) {
+    return res.status(400).json({ error: 'Invalid order data' });
+  }
+
+  try {
+    // Create Razorpay order (amount in paise)
+    const rzOrder = await razorpay.orders.create({
+      amount,
+      currency,
+      receipt: `order_${Date.now()}`,
+    });
+
+    // Save to DB
+    await query(
+      `INSERT INTO orders (firebase_uid, razorpay_order_id, amount, currency, status, items, shipping)
+       VALUES ($1, $2, $3, $4, 'created', $5, $6)`,
+      [uid, rzOrder.id, amount, currency, JSON.stringify(items), shipping ? JSON.stringify(shipping) : null]
+    );
+
+    return res.json({
+      orderId: rzOrder.id,
+      amount: rzOrder.amount,
+      currency: rzOrder.currency,
+    });
+  } catch (err: any) {
+    console.error('Order create error:', err);
+    return res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+// POST /api/orders/verify — verify Razorpay payment signature + update DB
+router.post('/verify', orderVerifyLimiter, authMiddleware, async (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({ error: 'Missing payment details' });
+  }
+
+  // Verify signature
+  const body = razorpay_order_id + '|' + razorpay_payment_id;
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+    .update(body)
+    .digest('hex');
+
+  if (expectedSignature !== razorpay_signature) {
+    return res.status(400).json({ error: 'Invalid payment signature' });
+  }
+
+  try {
+    await query(
+      `UPDATE orders SET status = 'paid', razorpay_payment_id = $1, updated_at = datetime('now')
+       WHERE razorpay_order_id = $2`,
+      [razorpay_payment_id, razorpay_order_id]
+    );
+
+    return res.json({ ok: true, message: 'Payment verified' });
+  } catch (err) {
+    console.error('Payment verify error:', err);
+    return res.status(500).json({ error: 'Failed to verify payment' });
+  }
+});
+
+// GET /api/orders/history — get user's orders
 router.get('/history', authMiddleware, async (req: Request, res: Response) => {
-    const uid = (req as any).uid;
-    try {
-        const result = await query(
-            `SELECT id, razorpay_order_id, razorpay_payment_id, amount, currency, status, items, shipping, created_at
+  const uid = (req as any).uid;
+  try {
+    const result = await query(
+      `SELECT id, razorpay_order_id, razorpay_payment_id, amount, currency, status, items, shipping, created_at
        FROM orders WHERE firebase_uid = $1 ORDER BY created_at DESC LIMIT 50`,
-            [uid]
-        );
-        return res.json(result.rows);
-    } catch (err) {
-        console.error('Order history error:', err);
-        return res.status(500).json({ error: 'Failed to fetch orders' });
-    }
+      [uid]
+    );
+    // Parse JSON string fields stored in SQLite TEXT columns
+    const rows = result.rows.map((r: any) => ({
+      ...r,
+      items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,
+      shipping: r.shipping && typeof r.shipping === 'string' ? JSON.parse(r.shipping) : r.shipping,
+    }));
+    return res.json(rows);
+  } catch (err) {
+    console.error('Order history error:', err);
+    return res.status(500).json({ error: 'Failed to fetch orders' });
+  }
 });
 
 export default router;

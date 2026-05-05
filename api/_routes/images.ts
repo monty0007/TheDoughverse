@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { query } from '../_lib/db.js';
-import { rateLimit } from '../_middleware/security.js';
+import { rateLimit } from '../_middleware/rateLimit.js';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
         const offset = (page - 1) * limit;
         const { tag, model, search, sort } = req.query;
 
-        let whereClauses = ['i.is_published = true', 'i.is_deleted = false'];
+        let whereClauses = ['i.is_published = 1', 'i.is_deleted = 0'];
         let params: any[] = [];
         let paramIdx = 1;
 
@@ -23,13 +23,13 @@ router.get('/', async (req, res) => {
         }
 
         if (model) {
-            whereClauses.push(`i.model ILIKE $${paramIdx}`);
+            whereClauses.push(`i.model LIKE $${paramIdx}`);
             params.push(`%${model}%`);
             paramIdx++;
         }
 
         if (search) {
-            whereClauses.push(`(i.title ILIKE $${paramIdx} OR i.prompt ILIKE $${paramIdx})`);
+            whereClauses.push(`(i.title LIKE $${paramIdx} OR i.prompt LIKE $${paramIdx})`);
             params.push(`%${search}%`);
             paramIdx++;
         }
@@ -38,18 +38,18 @@ router.get('/', async (req, res) => {
         if (sort === 'most_liked') {
             orderBy = 'i.like_count DESC';
         } else if (sort === 'trending') {
-            orderBy = `(SELECT COUNT(*) FROM prompt_copies pc WHERE pc.image_id = i.id AND pc.created_at > NOW() - INTERVAL '7 days') DESC`;
+            orderBy = `(SELECT COUNT(*) FROM prompt_copies pc WHERE pc.image_id = i.id AND pc.created_at > datetime('now', '-7 days')) DESC`;
         }
 
         const where = whereClauses.join(' AND ');
 
-        const countResult = await query(`SELECT COUNT(*) FROM images i WHERE ${where}`, params);
+        const countResult = await query(`SELECT COUNT(*) as count FROM images i WHERE ${where}`, params);
         const total = parseInt(countResult.rows[0].count);
 
         const result = await query(
-            `SELECT i.*, 
+            `SELECT i.*,
         COALESCE(
-          (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'slug', t.slug))
+          (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'slug', t.slug))
            FROM image_tags it JOIN tags t ON t.id = it.tag_id WHERE it.image_id = i.id), '[]'
         ) as tags
        FROM images i
@@ -75,11 +75,11 @@ router.get('/:id', async (req, res) => {
         const result = await query(
             `SELECT i.*,
         COALESCE(
-          (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'slug', t.slug))
+          (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'slug', t.slug))
            FROM image_tags it JOIN tags t ON t.id = it.tag_id WHERE it.image_id = i.id), '[]'
         ) as tags
        FROM images i
-       WHERE i.id = $1 AND i.is_published = true AND i.is_deleted = false`,
+       WHERE i.id = $1 AND i.is_published = 1 AND i.is_deleted = 0`,
             [req.params.id]
         );
 
@@ -98,21 +98,21 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/similar', async (req, res) => {
     try {
         const result = await query(
-            `SELECT * FROM (
-              SELECT DISTINCT ON (i.id) i.*,
+            `SELECT i.*,
               COALESCE(
-                (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'slug', t.slug))
+                (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'slug', t.slug))
                  FROM image_tags it2 JOIN tags t ON t.id = it2.tag_id WHERE it2.image_id = i.id), '[]'
               ) as tags
              FROM images i
-             JOIN image_tags it ON it.image_id = i.id
-             WHERE it.tag_id IN (SELECT tag_id FROM image_tags WHERE image_id = $1)
-               AND i.id != $1
-               AND i.is_published = true
-               AND i.is_deleted = false
-             ORDER BY i.id
-            ) sub ORDER BY sub.like_count DESC
-            LIMIT 8`,
+             WHERE i.id IN (
+               SELECT DISTINCT it.image_id FROM image_tags it
+               WHERE it.tag_id IN (SELECT tag_id FROM image_tags WHERE image_id = $1)
+               AND it.image_id != $1
+             )
+             AND i.is_published = 1
+             AND i.is_deleted = 0
+             ORDER BY i.like_count DESC
+             LIMIT 8`,
             [req.params.id]
         );
 
@@ -124,7 +124,7 @@ router.get('/:id/similar', async (req, res) => {
 });
 
 // POST /api/images/:id/like — with fingerprint dedup
-const likeLimiter = rateLimit('image-like', 60 * 1000, 10);
+const likeLimiter = rateLimit('like', 60 * 1000, 10);
 router.post('/:id/like', likeLimiter, async (req, res) => {
     try {
         const { fingerprint } = req.body;
@@ -133,8 +133,7 @@ router.post('/:id/like', likeLimiter, async (req, res) => {
         }
 
         const existing = await query(
-            `SELECT id FROM likes
-       WHERE image_id = $1 AND fingerprint = $2 AND created_at > NOW() - INTERVAL '24 hours'`,
+            `SELECT id FROM likes WHERE image_id = $1 AND fingerprint = $2 AND created_at > datetime('now', '-1 day')`,
             [req.params.id, fingerprint]
         );
 
@@ -153,7 +152,7 @@ router.post('/:id/like', likeLimiter, async (req, res) => {
 });
 
 // POST /api/images/:id/copy — track prompt copy
-const copyLimiter = rateLimit('image-copy', 60 * 1000, 30);
+const copyLimiter = rateLimit('copy', 60 * 1000, 30);
 router.post('/:id/copy', copyLimiter, async (req, res) => {
     try {
         await query('INSERT INTO prompt_copies (image_id) VALUES ($1)', [req.params.id]);

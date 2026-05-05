@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { isAllowedOrigin, normalizeAllowedOrigins, rateLimit, requireTrustedOrigin, securityHeaders } from './_middleware/security.js';
+import { isAllowedOrigin, normalizeAllowedOrigins, requireTrustedOrigin } from './_middleware/security.js';
+import { rateLimit } from './_middleware/rateLimit.js';
 
 import authRoutes from './_routes/auth.js';
 import imageRoutes from './_routes/images.js';
@@ -20,7 +21,7 @@ app.disable('x-powered-by');
 // Middleware
 const allowedOrigins = normalizeAllowedOrigins();
 
-app.use(securityHeaders);
+// Note: security headers (HSTS, X-Frame-Options, CSP, etc.) are set in vercel.json
 app.use(rateLimit('api-global', 15 * 60 * 1000, 300));
 
 app.use(cors({

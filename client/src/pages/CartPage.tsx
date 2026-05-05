@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Minus, Plus, Trash2, ShoppingBag, Cookie, ArrowLeft } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
 import { useNavigate, Link } from 'react-router-dom';
+import { getProductImage } from '../lib/productImages';
 
 const BLUE = '#1A4FE8';
 const CREAM = '#FFFCDC';
@@ -18,7 +19,7 @@ export function CartPage() {
         {/* Back */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 mb-8 text-xs font-bold uppercase tracking-wider hover:opacity-70 transition-opacity"
+          className="flex items-center gap-2 mb-8 mt-4 text-xs font-bold uppercase tracking-wider hover:opacity-70 transition-opacity"
           style={{ color: BLUE, fontFamily: '"Nunito", sans-serif' }}
         >
           <ArrowLeft className="w-4 h-4" /> Back
@@ -44,7 +45,7 @@ export function CartPage() {
           </div>
           {items.length > 0 && (
             <button
-              onClick={clearCart}
+              onClick={() => { if (window.confirm('Remove all items from your cart?')) clearCart(); }}
               className="text-xs font-bold uppercase tracking-wider hover:opacity-70 transition-opacity"
               style={{ color: BLUE, opacity: 0.45, fontFamily: '"Nunito", sans-serif' }}
             >
@@ -101,7 +102,7 @@ export function CartPage() {
                       {/* Image */}
                       <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0">
                         <img
-                          src={product.image}
+                          src={getProductImage(product)}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />

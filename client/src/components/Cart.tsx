@@ -3,6 +3,7 @@ import { X, Minus, Plus, Trash2, ShoppingBag, Cookie } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { getProductImage } from '../lib/productImages';
 
 export function Cart() {
   const { items, isOpen, closeCart, removeItem, updateQty, clearCart, totalItems, totalPrice } = useCartStore();
@@ -48,7 +49,7 @@ export function Cart() {
               <div className="flex items-center gap-3">
                 {items.length > 0 && (
                   <button
-                    onClick={clearCart}
+                    onClick={() => { if (window.confirm('Remove all items from your cart?')) clearCart(); }}
                     className="text-ink/40 hover:text-ink text-xs font-mono uppercase tracking-widest transition-colors"
                   >
                     Clear all
@@ -94,7 +95,7 @@ export function Cart() {
                         {/* Image */}
                         <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-ink/5">
                           <img
-                            src={product.image}
+                            src={getProductImage(product)}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />

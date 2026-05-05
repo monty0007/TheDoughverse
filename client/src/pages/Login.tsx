@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useFirebaseAuth } from '../store/useFirebaseAuth';
@@ -10,6 +10,8 @@ const CREAM = '#FFFCDC';
 export function Login() {
   const { user, loading, error, loginWithEmail, registerWithEmail, loginWithGoogle, clearError } =
     useFirebaseAuth();
+  const location = useLocation();
+  const from: string = (location.state as any)?.from ?? '/cookies';
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -238,7 +240,7 @@ export function Login() {
         {/* Continue as guest */}
         <div className="text-center mt-4">
           <Link
-            to="/cookies"
+            to={from}
             className="w-full inline-block py-3.5 rounded-2xl text-sm font-bold transition-all hover:shadow-md active:scale-[0.98]"
             style={{
               border: '1.5px solid rgba(26,79,232,0.15)',

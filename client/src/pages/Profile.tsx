@@ -17,7 +17,7 @@ export function Profile() {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
 
   const initial = (user.displayName || user.email || '?')[0].toUpperCase();
 

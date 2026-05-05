@@ -63,7 +63,7 @@ export function Favourites() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
 
   const favouriteProducts = COOKIE_PRODUCTS.filter((p) => favIds.includes(p.id));
 

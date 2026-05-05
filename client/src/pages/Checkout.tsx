@@ -28,7 +28,7 @@ export function Checkout() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
   if (items.length === 0 && !success) return <Navigate to="/cookies" replace />;
 
   const canSubmit = shipping.name && shipping.address && shipping.city && shipping.zip && shipping.phone;
@@ -116,7 +116,7 @@ export function Checkout() {
         {/* Back */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 mb-8 text-xs font-bold uppercase tracking-wider hover:opacity-70 transition-opacity"
+          className="flex items-center gap-2 mb-8 mt-4 text-xs font-bold uppercase tracking-wider hover:opacity-70 transition-opacity"
           style={{ color: BLUE, fontFamily: '"Nunito", sans-serif' }}
         >
           <ArrowLeft className="w-4 h-4" /> Back

@@ -75,6 +75,31 @@ function useNavbarVisibility() {
   return { scrolled, hidden };
 }
 
+function MobileCartFab() {
+  const location = useLocation();
+  const count = useCartStore((s) => s.totalItems)();
+  if (location.pathname === '/cart' || location.pathname.startsWith('/admin')) return null;
+  return (
+    <Link
+      to="/cart"
+      className="fixed bottom-6 right-4 z-50 sm:hidden flex items-center justify-center w-14 h-14 rounded-full shadow-xl active:scale-95 transition-transform"
+      style={{ backgroundColor: '#1A4FE8' }}
+      aria-label={`Open cart${count > 0 ? `, ${count} items` : ''}`}
+    >
+      <ShoppingBag className="w-6 h-6 text-white" />
+      {count > 0 && (
+        <span
+          className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold leading-none"
+          style={{ backgroundColor: '#E8B4D8', color: '#1A4FE8' }}
+          aria-hidden="true"
+        >
+          {count > 9 ? '9+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 function MobilePageNav({ hidden }: { hidden: boolean }) {
   const location = useLocation();
   if (location.pathname.startsWith('/admin')) return null;
@@ -402,10 +427,10 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
             {isLightMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
 
-          {/* Cart */}
+          {/* Cart — hidden on mobile (use floating FAB instead) */}
           <Link
             to="/cart"
-            className="relative shrink-0 p-0 sm:p-2.5 rounded-full border transition-all group w-10 h-10 min-w-10 min-h-10 sm:w-auto sm:h-auto sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center sm:border-ink/15 sm:text-ink/60 sm:bg-bg/50"
+            className="relative shrink-0 p-0 sm:p-2.5 rounded-full border transition-all group hidden sm:flex w-10 h-10 min-w-10 min-h-10 sm:w-auto sm:h-auto sm:min-w-[44px] sm:min-h-[44px] items-center justify-center sm:border-ink/15 sm:text-ink/60 sm:bg-bg/50"
             style={{ borderColor: 'rgba(26,79,232,0.18)', color: '#1A4FE8', backgroundColor: 'rgba(26,79,232,0.05)' }}
             aria-label={`Open cart${count > 0 ? `, ${count} items` : ''}`}
           >
@@ -501,6 +526,7 @@ export default function App() {
           </Suspense>
         </main>
         <Footer />
+        <MobileCartFab />
         <Toaster
           position="bottom-center"
           toastOptions={{

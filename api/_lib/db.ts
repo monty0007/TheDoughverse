@@ -1,25 +1,37 @@
-import pg from 'pg';
+import { createClient, type Client } from '@libsql/client';
 
-let pool: pg.Pool;
+let client: Client;
 
-function getPool() {
-    if (!pool) {
-        if (!process.env.DATABASE_URL) {
-            throw new Error('DATABASE_URL is not defined in environment variables');
+function getClient() {
+    if (!client) {
+        if (!process.env.TURSO_DATABASE_URL) {
+            throw new Error('TURSO_DATABASE_URL is not defined in environment variables');
         }
-        pool = new pg.Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: { rejectUnauthorized: false },
-            max: 5,
-        });
-        pool.on('error', (err) => {
-            console.error('Unexpected error on idle client', err);
+        client = createClient({
+            url: process.env.TURSO_DATABASE_URL,
+            authToken: process.env.TURSO_AUTH_TOKEN!,
         });
     }
-    return pool;
+    return client;
 }
 
+function normalizeArg(v: any): any {
+    if (v === undefined || v === null) return null;
+    if (v === true) return 1;
+    if (v === false) return 0;
+    return v;
+}
+
+/**
+ * Drop-in replacement for pg's pool.query().
+ * Converts PostgreSQL $N placeholders → SQLite ?, expanding repeated refs.
+ */
 export async function query(text: string, params?: any[]) {
-    const result = await getPool().query(text, params);
-    return result;
+    const usedArgs: any[] = [];
+    const sql = text.replace(/\$(\d+)/g, (_, n) => {
+        usedArgs.push(normalizeArg((params ?? [])[parseInt(n, 10) - 1]));
+        return '?';
+    });
+    const result = await getClient().execute({ sql, args: usedArgs });
+    return { rows: result.rows.map(r => ({ ...r })) as any[] };
 }

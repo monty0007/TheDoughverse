@@ -14,7 +14,7 @@ import { Sun, Moon, ShoppingBag, Search, User, X } from 'lucide-react';
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from './lib/utils';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import { useCartStore } from './store/useCartStore';
 import { useMenuStore } from './store/useMenuStore';
 import { useFirebaseAuth } from './store/useFirebaseAuth';
@@ -35,6 +35,7 @@ const StyleConverter = lazy(() => import('./pages/StyleConverter').then((module)
 const PromptBuilder = lazy(() => import('./pages/PromptBuilder').then((module) => ({ default: module.PromptBuilder })));
 const SavedPage = lazy(() => import('./pages/SavedPage').then((module) => ({ default: module.SavedPage })));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard').then((module) => ({ default: module.AdminDashboard })));
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders').then((module) => ({ default: module.AdminOrders })));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings').then((module) => ({ default: module.AdminSettings })));
 const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })));
 const NotFound = lazy(() => import('./pages/NotFound').then((module) => ({ default: module.NotFound })));
@@ -251,8 +252,20 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
       />
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-24 flex items-center justify-between">
 
-        {/* Left — search */}
-        <div className="relative z-10 flex items-center">
+        {/* Left */}
+        <div className="relative z-10 flex items-center gap-2">
+          {/* Dark mode toggle — mobile only, sits on left side */}
+          <button
+            onClick={() => setIsLightMode(!isLightMode)}
+            className="flex sm:hidden shrink-0 items-center justify-center w-8 h-8 rounded-full border transition-all"
+            style={{ borderColor: 'rgba(26,79,232,0.18)', color: '#1A4FE8', backgroundColor: 'rgba(26,79,232,0.05)' }}
+            aria-label={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {isLightMode ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Search — desktop only */}
+          <div className="hidden sm:block relative">
           <AnimatePresence mode="wait">
             {searchOpen ? (
               <motion.div
@@ -349,7 +362,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
                 onClick={openSearch}
-                className="p-0 sm:p-2.5 rounded-full border text-ink/60 hover:text-ink bg-bg/50 backdrop-blur-sm transition-all w-10 h-10 min-w-10 min-h-10 sm:w-auto sm:h-auto sm:min-w-[44px] sm:min-h-[44px] flex shrink-0 items-center justify-center sm:border-ink/15 sm:hover:border-ink/30"
+                className="flex shrink-0 items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:p-2.5 sm:min-w-[44px] sm:min-h-[44px] rounded-full border transition-all bg-bg/50 backdrop-blur-sm sm:border-ink/15 sm:hover:border-ink/30 hover:text-ink text-ink/60"
                 style={{ borderColor: 'rgba(26,79,232,0.18)', color: '#1A4FE8' }}
                 aria-label="Open search"
               >
@@ -357,6 +370,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
               </motion.button>
             )}
           </AnimatePresence>
+          </div>
         </div>
 
         {/* Centre — logo + name + page links */}
@@ -405,25 +419,29 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
         </div>
 
         {/* Right actions */}
-        <div className="relative z-10 flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="relative z-10 flex shrink-0 items-center gap-2 sm:gap-2">
           {/* WhatsApp support button */}
           <a
             href={getWhatsAppSupportUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex shrink-0 items-center justify-center gap-1 px-2.5 sm:px-4 py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-10 sm:min-h-[44px]"
+            onClick={(e) => {
+              e.preventDefault();
+              toast.success('Connecting you to support on WhatsApp!', { icon: '💬', duration: 2500 });
+              setTimeout(() => window.open(getWhatsAppSupportUrl(), '_blank', 'noopener,noreferrer'), 400);
+            }}
+            className="flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-[32px] sm:min-h-[44px]"
             style={{ backgroundColor: '#25D366', color: '#fff', fontFamily: '"Nunito", sans-serif' }}
             aria-label="Contact support on WhatsApp"
           >
-            <WhatsAppIcon className="w-4 h-4 shrink-0" />
-            <span className="sm:hidden">Help</span>
-            <span className="hidden sm:inline">Support</span>
+            <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span>Support</span>
           </a>
 
-          {/* Theme toggle */}
+          {/* Theme toggle — desktop only (mobile version is on the left) */}
           <button
             onClick={() => setIsLightMode(!isLightMode)}
-            className="flex shrink-0 p-0 sm:p-2.5 rounded-full border transition-all w-10 h-10 min-w-10 min-h-10 sm:w-auto sm:h-auto sm:min-w-[44px] sm:min-h-[44px] items-center justify-center sm:border-ink/15 sm:text-ink/60 sm:bg-bg/50"
+            className="hidden sm:flex shrink-0 items-center justify-center sm:p-2.5 sm:min-w-[44px] sm:min-h-[44px] rounded-full border transition-all sm:border-ink/15 sm:text-ink/60 sm:bg-bg/50"
             style={{ borderColor: 'rgba(26,79,232,0.18)', color: '#1A4FE8', backgroundColor: 'rgba(26,79,232,0.05)' }}
             aria-label={isLightMode ? 'Switch to dark mode' : 'Switch to light mode'}
           >
@@ -448,7 +466,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
           {/* User / Login */}
           <Link
             to={fbUser ? '/profile' : '/login'}
-            className="shrink-0 p-0 sm:p-2.5 rounded-full border transition-all overflow-hidden w-10 h-10 min-w-10 min-h-10 sm:w-auto sm:h-auto sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center sm:border-ink/15 sm:text-ink/60 sm:bg-bg/50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 sm:w-auto sm:h-auto sm:p-2.5 sm:min-w-[44px] sm:min-h-[44px] rounded-full border overflow-hidden transition-all sm:border-ink/15 sm:text-ink/60 sm:bg-bg/50"
             style={{ borderColor: 'rgba(26,79,232,0.18)', color: '#1A4FE8', backgroundColor: 'rgba(26,79,232,0.05)' }}
             aria-label={fbUser ? 'Your profile' : 'Sign in'}
           >
@@ -522,6 +540,7 @@ export default function App() {
           <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/admin" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
           <Route path="/admin/products" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
+          <Route path="/admin/orders" element={<RequireAuth><AdminOrders /></RequireAuth>} />
           <Route path="/admin/settings" element={<RequireAuth><AdminSettings /></RequireAuth>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

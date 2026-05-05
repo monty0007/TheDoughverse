@@ -1,20 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ShoppingBag, MapPin, ArrowLeft, Check } from 'lucide-react';
+import { ShoppingBag, MapPin, ArrowLeft, Check, Save } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
 import { getWhatsAppNumber } from '../lib/settings';
+import { useFirebaseAuth } from '../store/useFirebaseAuth';
+import { getProductImage } from '../lib/productImages';
+import { API_BASE } from '../lib/api';
 
 const BLUE = '#1A4FE8';
 const CREAM = '#FFFCDC';
 
+type ShippingForm = { name: string; address: string; city: string; zip: string; phone: string };
+
+function addressKey(uid: string) { return `doughverse_address_${uid}`; }
+
+function loadSavedAddress(uid: string): ShippingForm | null {
+  try {
+    const raw = localStorage.getItem(addressKey(uid));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveAddress(uid: string, data: ShippingForm) {
+  try { localStorage.setItem(addressKey(uid), JSON.stringify(data)); } catch {}
+}
+
 export function Checkout() {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart } = useCartStore();
+  const { user } = useFirebaseAuth();
   const total = totalPrice();
-  const [shipping, setShipping] = useState({ name: '', address: '', city: '', zip: '', phone: '' });
+  const [shipping, setShipping] = useState<ShippingForm>({ name: '', address: '', city: '', zip: '', phone: '' });
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [saveAddr, setSaveAddr] = useState(true);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  // Pre-fill with saved address when user is known
+  useEffect(() => {
+    if (!user) return;
+    const saved = loadSavedAddress(user.uid);
+    if (saved) {
+      setShipping(saved);
+      setHasSaved(true);
+    } else if (user.displayName) {
+      setShipping(s => ({ ...s, name: user.displayName ?? '' }));
+    }
+  }, [user?.uid]);
 
   if (items.length === 0 && !success) {
     navigate('/cookies', { replace: true });
@@ -23,16 +57,50 @@ export function Checkout() {
 
   const canSubmit = shipping.name && shipping.address && shipping.city && shipping.zip && shipping.phone;
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!canSubmit) return;
+    if (user && saveAddr) saveAddress(user.uid, shipping);
     setProcessing(true);
+
+    // Save order to DB and get order number
+    let finalOrderNumber: string | null = null;
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user) {
+        const { getFirebaseAuth } = await import('../lib/firebase');
+        const idToken = await getFirebaseAuth().currentUser?.getIdToken();
+        if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+      }
+      const res = await fetch(`${API_BASE}/api/orders/whatsapp`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          items: items.map(({ product, quantity }) => ({
+            name: product.name,
+            price: product.price,
+            quantity,
+            image: product.image,
+          })),
+          shipping,
+          total,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        finalOrderNumber = data.orderNumber;
+        setOrderNumber(finalOrderNumber);
+      }
+    } catch {
+      // Non-fatal — order still goes via WhatsApp
+    }
 
     const orderLines = items
       .map(({ product, quantity }) => `  • ${product.name} ×${quantity} — ₹${(product.price * quantity).toFixed(2)}`)
       .join('\n');
 
     const message = [
-      '\uD83C\uDF6A *New Order — The Dough Affair*',
+      '🍪 *New Order — The Dough Affair*',
+      finalOrderNumber ? `*Order No: ${finalOrderNumber}*` : '',
       '',
       '*Customer Details*',
       `Name: ${shipping.name}`,
@@ -43,7 +111,7 @@ export function Checkout() {
       orderLines,
       '',
       `*Total: ₹${total.toFixed(2)}*`,
-    ].join('\n');
+    ].filter(l => l !== '').join('\n');
 
     const url = `https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -72,8 +140,14 @@ export function Checkout() {
             style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
           >
             Order Sent!
-          </h1>
-          <p
+          </h1>          {orderNumber && (
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-sm font-bold"
+              style={{ backgroundColor: 'rgba(26,79,232,0.08)', color: BLUE, fontFamily: '"Fredoka One", cursive' }}
+            >
+              🍪 {orderNumber}
+            </div>
+          )}          <p
             className="text-sm mb-8"
             style={{ color: BLUE, opacity: 0.55, fontFamily: '"Nunito", sans-serif' }}
           >
@@ -137,6 +211,23 @@ export function Checkout() {
               </h2>
             </div>
 
+            {/* Saved address notice */}
+            {user && hasSaved && (
+              <div
+                className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl mb-4 text-xs font-bold"
+                style={{ backgroundColor: 'rgba(26,79,232,0.06)', color: BLUE, fontFamily: '"Nunito", sans-serif' }}
+              >
+                <span>✓ Loaded your saved address</span>
+                <button
+                  type="button"
+                  onClick={() => { setShipping({ name: '', address: '', city: '', zip: '', phone: '' }); setHasSaved(false); }}
+                  className="underline opacity-50 hover:opacity-100 transition-opacity"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-col gap-4">
               {[
                 { key: 'name', label: 'Full Name', type: 'text' },
@@ -166,6 +257,24 @@ export function Checkout() {
                 </div>
               ))}
             </div>
+
+            {/* Save address toggle — only for logged-in users */}
+            {user && (
+              <button
+                type="button"
+                onClick={() => setSaveAddr(v => !v)}
+                className="flex items-center gap-2 mt-5 text-xs font-bold transition-opacity hover:opacity-80"
+                style={{ color: BLUE, fontFamily: '"Nunito", sans-serif' }}
+              >
+                <span
+                  className="w-4 h-4 rounded flex items-center justify-center border-2 transition-colors"
+                  style={{ borderColor: BLUE, backgroundColor: saveAddr ? BLUE : 'transparent' }}
+                >
+                  {saveAddr && <Save className="w-2.5 h-2.5 text-white" />}
+                </span>
+                Save address for next time
+              </button>
+            )}
           </motion.div>
 
           {/* Order summary — 2 cols */}
@@ -189,7 +298,7 @@ export function Checkout() {
             <ul className="flex flex-col gap-3 mb-6">
               {items.map(({ product, quantity }) => (
                 <li key={product.id} className="flex items-center gap-3">
-                  <img src={product.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  <img src={getProductImage(product)} alt="" className="w-10 h-10 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold truncate" style={{ color: BLUE }}>{product.name}</p>
                     <p className="text-[10px]" style={{ color: BLUE, opacity: 0.45 }}>×{quantity}</p>

@@ -15,47 +15,72 @@ const STORY_IMAGES = [
   'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=400&q=80&fit=crop',
 ];
 
-// Six corner/edge positions — none overlap the centred text & button block
+// Edge positions — none overlap the centred text & button block
 const MOBILE_POSITIONS = [
   { top: '5%',    left: '3%'   },
   { top: '5%',    right: '3%'  },
+  { top: '23%',   left: '6%'   },
+  { top: '23%',   right: '6%'  },
   { bottom: '13%', left: '3%'  },
   { bottom: '13%', right: '3%' },
   { top: '40%',   left: '1%'   },
   { top: '40%',   right: '1%'  },
 ] as const;
-const MOBILE_ROTATIONS = [-8, 7, -5, 9, -7, 6] as const;
+const MOBILE_ROTATIONS = [-8, 7, -4, 5, -5, 9, -7, 6] as const;
 
 function MobileSlideshow({ images }: { images: string[] }) {
-  const [idx, setIdx] = useState(0);
+  // Each entry: { src, pos, rot, id }
+  const [visible, setVisible] = useState<{ src: string; pos: typeof MOBILE_POSITIONS[number]; rot: number; id: number }[]>([]);
+  const counterRef = useRef(0);
+  const imgIdxRef = useRef(0);
 
   useEffect(() => {
     if (images.length === 0) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % images.length), 2800);
+    setVisible([]);
+    counterRef.current = 0;
+    imgIdxRef.current = 0;
+
+    const addNext = () => {
+      setVisible(prev => {
+        const limit = Math.min(images.length, MOBILE_POSITIONS.length);
+        if (prev.length >= limit) return prev;
+
+        const slot = prev.length;
+        const next = [...prev, {
+          src: images[imgIdxRef.current % images.length],
+          pos: MOBILE_POSITIONS[slot],
+          rot: MOBILE_ROTATIONS[slot],
+          id: counterRef.current++,
+        }];
+        imgIdxRef.current++;
+        return next;
+      });
+    };
+
+    addNext();
+    const t = setInterval(addNext, 900);
     return () => clearInterval(t);
-  }, [images.length]);
+  }, [images]);
 
   if (images.length === 0) return null;
 
-  const pos = MOBILE_POSITIONS[idx % MOBILE_POSITIONS.length];
-  const rot = MOBILE_ROTATIONS[idx % MOBILE_ROTATIONS.length];
-
   return (
     <div className="absolute inset-x-0 top-10 bottom-0 pointer-events-none z-0 overflow-hidden lg:hidden">
-      <AnimatePresence mode="wait">
-        <motion.img
-          key={idx}
-          src={images[idx]}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          initial={{ opacity: 0, scale: 0.82, rotate: rot - 5 }}
-          animate={{ opacity: 0.82, scale: 1, rotate: rot }}
-          exit={{ opacity: 0, scale: 1.06, filter: 'blur(4px)', transition: { duration: 0.35 } }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-xl border-2 border-white/30"
-          style={pos}
-        />
+      <AnimatePresence>
+        {visible.map(({ src, pos, rot, id }) => (
+          <motion.img
+            key={id}
+            src={src}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            initial={{ opacity: 0, scale: 0.78, rotate: rot - 8 }}
+            animate={{ opacity: 0.85, scale: 1, rotate: rot }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-xl border-2 border-white/30"
+            style={pos}
+          />
+        ))}
       </AnimatePresence>
     </div>
   );

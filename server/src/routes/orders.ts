@@ -4,15 +4,37 @@ import crypto from 'crypto';
 import { query } from '../db.js';
 import { firebaseAdmin } from '../lib/firebase.js';
 import { rateLimit } from '../middleware/rateLimit.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 const orderCreateLimiter = rateLimit('order-create', 60 * 1000, 20);
 const orderVerifyLimiter = rateLimit('order-verify', 60 * 1000, 30);
+const whaSubmitLimiter = rateLimit('wa-order-submit', 60 * 1000, 10);
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
+
+// Generate order number: meow#XXXX
+function generateOrderNumber(): string {
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `meow#${num}`;
+}
+
+// Middleware: extract Firebase UID from Authorization header (optional — guest orders have no uid)
+async function optionalFirebaseAuth(req: Request, res: Response, next: Function) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const decoded = await firebaseAdmin.auth().verifyIdToken(auth.slice(7));
+      (req as any).uid = decoded.uid;
+    } catch {
+      // ignore invalid token for guest orders
+    }
+  }
+  next();
+}
 
 // Middleware: extract Firebase UID from Authorization header
 async function authMiddleware(req: Request, res: Response, next: Function) {
@@ -28,6 +50,79 @@ async function authMiddleware(req: Request, res: Response, next: Function) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
+
+// ── WhatsApp order submit (guest + logged-in) ──────────────────────────────
+// POST /api/orders/whatsapp — save a WhatsApp-based order to DB
+router.post('/whatsapp', whaSubmitLimiter, optionalFirebaseAuth, async (req: Request, res: Response) => {
+  const { items, shipping, total } = req.body;
+  const uid = (req as any).uid ?? null;
+
+  if (!items?.length || !shipping?.name || !total) {
+    return res.status(400).json({ error: 'Invalid order data' });
+  }
+
+  // Ensure unique order number
+  let orderNumber = generateOrderNumber();
+  for (let i = 0; i < 5; i++) {
+    const existing = await query('SELECT id FROM orders WHERE order_number = $1', [orderNumber]);
+    if (!existing.rows.length) break;
+    orderNumber = generateOrderNumber();
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO orders (firebase_uid, order_number, amount, currency, status, admin_status, items, shipping)
+       VALUES ($1, $2, $3, 'INR', 'paid', 'pending', $4, $5)
+       RETURNING id, order_number`,
+      [uid, orderNumber, Math.round(total * 100), JSON.stringify(items), JSON.stringify(shipping)]
+    );
+    return res.json({ ok: true, orderNumber, id: result.rows[0].id });
+  } catch (err: any) {
+    console.error('WhatsApp order save error:', err);
+    return res.status(500).json({ error: 'Failed to save order' });
+  }
+});
+
+// ── Admin: list all orders ──────────────────────────────────────────────────
+// GET /api/orders/admin/all
+router.get('/admin/all', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT id, firebase_uid, order_number, amount, currency, status, admin_status, items, shipping, created_at
+       FROM orders ORDER BY created_at DESC LIMIT 200`
+    );
+    const rows = result.rows.map((r: any) => ({
+      ...r,
+      items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,
+      shipping: r.shipping && typeof r.shipping === 'string' ? JSON.parse(r.shipping) : r.shipping,
+    }));
+    return res.json(rows);
+  } catch (err) {
+    console.error('Admin orders list error:', err);
+    return res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+// ── Admin: update admin_status ─────────────────────────────────────────────
+// PATCH /api/orders/admin/:id/status
+router.patch('/admin/:id/status', requireAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { admin_status } = req.body;
+  const allowed = ['pending', 'accepted', 'rejected', 'fulfilled'];
+  if (!allowed.includes(admin_status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+  try {
+    await query(
+      `UPDATE orders SET admin_status = $1, updated_at = datetime('now') WHERE id = $2`,
+      [admin_status, id]
+    );
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Admin status update error:', err);
+    return res.status(500).json({ error: 'Failed to update status' });
+  }
+});
 
 // GET /api/orders/razorpay-key — serve Razorpay key ID to frontend
 router.get('/razorpay-key', (_req: Request, res: Response) => {

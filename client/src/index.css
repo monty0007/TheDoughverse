@@ -43,6 +43,10 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  button, [role="button"] {
+    cursor: pointer;
+  }
+
   /* Accessible focus styles */
   :focus-visible {
     outline: 2px solid var(--theme-accent);

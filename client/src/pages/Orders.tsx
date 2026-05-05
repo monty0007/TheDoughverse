@@ -57,7 +57,7 @@ export function Orders() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
+  if (!user) return <Navigate to="/login" state={{ from: window.location.pathname, hideGuest: true }} replace />;
 
   return (
     <div className="min-h-screen pt-28 sm:pt-28 pb-20 px-4" style={{ backgroundColor: CREAM }}>

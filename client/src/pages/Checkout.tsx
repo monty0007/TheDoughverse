@@ -147,7 +147,7 @@ export function Checkout() {
             style={{ color: BLUE, fontFamily: '"Fredoka One", cursive' }}
           >
             Order Sent!
-          </h1>          {orderNumber && (
+          </h1>          {user && orderNumber && (
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-sm font-bold"
               style={{ backgroundColor: 'rgba(26,79,232,0.08)', color: BLUE, fontFamily: '"Fredoka One", cursive' }}
@@ -161,13 +161,15 @@ export function Checkout() {
             Your order has been sent via WhatsApp. We’ll confirm it shortly!
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => navigate('/orders')}
-              className="px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider text-white"
-              style={{ backgroundColor: BLUE, fontFamily: '"Nunito", sans-serif' }}
-            >
-              View Orders
-            </button>
+            {user && (
+              <button
+                onClick={() => navigate('/orders')}
+                className="px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider text-white"
+                style={{ backgroundColor: BLUE, fontFamily: '"Nunito", sans-serif' }}
+              >
+                View Orders
+              </button>
+            )}
             <button
               onClick={() => navigate('/cookies')}
               className="px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider"

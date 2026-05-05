@@ -10,9 +10,9 @@ router.get('/', async (_req, res) => {
             'SELECT * FROM cookie_products WHERE is_active = true ORDER BY sort_order ASC, created_at ASC'
         );
         return res.json(result.rows);
-    } catch (err) {
-        console.error('Error fetching products:', err);
-        return res.status(500).json({ error: 'Internal server error' });
+    } catch (err: any) {
+        console.error('Error fetching products:', err?.message ?? err);
+        return res.status(500).json({ error: 'Internal server error', detail: err?.message });
     }
 });
 

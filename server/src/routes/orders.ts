@@ -55,7 +55,7 @@ async function authMiddleware(req: Request, res: Response, next: Function) {
 // POST /api/orders/whatsapp — save a WhatsApp-based order to DB
 router.post('/whatsapp', whaSubmitLimiter, optionalFirebaseAuth, async (req: Request, res: Response) => {
   const { items, shipping, total } = req.body;
-  const uid = (req as any).uid ?? null;
+  const uid = (req as any).uid ?? ''; // empty string satisfies NOT NULL for guest orders
 
   if (!items?.length || !shipping?.name || !total) {
     return res.status(400).json({ error: 'Invalid order data' });

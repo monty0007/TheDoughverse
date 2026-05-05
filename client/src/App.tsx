@@ -12,6 +12,7 @@ import { MenuOverlay } from './components/MenuOverlay';
 import { Footer } from './components/Footer';
 import { Sun, Moon, ShoppingBag, Search, User, X } from 'lucide-react';
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from './lib/utils';
 import { Toaster, toast } from 'react-hot-toast';
@@ -458,6 +459,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
           </button>
 
           {/* Support confirmation modal */}
+          {createPortal(
           <AnimatePresence>
             {showSupportConfirm && (
               <motion.div
@@ -512,7 +514,9 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
                 </motion.div>
               </motion.div>
             )}
-          </AnimatePresence>
+          </AnimatePresence>,
+          document.body
+          )}
 
           {/* Theme toggle — desktop only (mobile version is on the left) */}
           <button

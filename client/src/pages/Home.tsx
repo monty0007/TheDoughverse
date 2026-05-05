@@ -28,6 +28,101 @@ const MOBILE_POSITIONS = [
 ] as const;
 const MOBILE_ROTATIONS = [-8, 7, -4, 5, -5, 9, -7, 6] as const;
 
+const STORY_CARDS = [
+  {
+    num: '01',
+    title: 'Cookies make people happy',
+    body: ['Cookies are the perfect desserts ever! They are sinfully delicious, can double up as a go to snack or as a perfect post-dinner dessert!', 'Plus, who has ever said no to a cookie?'],
+    cta: 'See our cookies →',
+    img: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=800&q=80&fit=crop',
+  },
+  {
+    num: '02',
+    title: 'Freshly Baked & Eggless',
+    body: ['All our cookies are eggless and baked on order. This means that everytime you receive a cookie pack, it was baked just for you!', "We are also 100% Eggless because we don't want any of you to hesitate before trying them out!"],
+    cta: 'Check our flavours',
+    img: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=800&q=80&fit=crop',
+  },
+  {
+    num: '03',
+    title: 'Shipped Pan India',
+    body: ['Our cookies have been shipped to 2000+ locations in India.', 'Wherever you stay, cookies can reach you in maximum 3–5 days.'],
+    cta: 'Shop Cookies',
+    img: 'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=800&q=80&fit=crop',
+  },
+  {
+    num: '04',
+    title: 'Coming Soon',
+    body: ['Something special is baking. Stay tuned!'],
+    cta: null,
+    img: 'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=800&q=80&fit=crop',
+  },
+];
+
+function MobileStorySection({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <div className="md:hidden relative z-[1]" style={{ backgroundColor: '#3B1F0E' }}>
+      {/* subtle dot pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          opacity: 0.04,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Ccircle cx='30' cy='30' r='12' fill='%23C4752A'/%3E%3Ccircle cx='26' cy='26' r='2' fill='%233B1F0E'/%3E%3Ccircle cx='34' cy='28' r='1.8' fill='%233B1F0E'/%3E%3Ccircle cx='28' cy='34' r='1.6' fill='%233B1F0E'/%3E%3Ccircle cx='33' cy='33' r='1.4' fill='%233B1F0E'/%3E%3C/svg%3E")`,
+          backgroundSize: '80px 80px',
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative flex flex-col gap-0 py-12 px-5">
+        {STORY_CARDS.map((card, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="mb-14"
+          >
+            {/* Text */}
+            <p className="text-sm uppercase tracking-widest mb-3" style={{ color: '#C4752A', fontFamily: '"Fredoka One", cursive' }}>{card.num}</p>
+            <h2 className="mb-4 leading-tight" style={{ fontSize: 'clamp(1.6rem, 7vw, 2.4rem)', fontFamily: '"Fredoka One", cursive', color: '#F5E6D3' }}>
+              {card.title}
+            </h2>
+            {card.body.map((p, pi) => (
+              <p key={pi} className="mb-2 text-base" style={{ lineHeight: 1.75, color: '#D4B896', fontFamily: '"Nunito", sans-serif' }}>{p}</p>
+            ))}
+            {card.cta && (
+              <button
+                onClick={onNavigate}
+                className="mt-5 rounded-full transition-all active:scale-95 min-h-[44px]"
+                style={{ padding: '11px 24px', backgroundColor: '#C4752A', color: '#FFF8EE', fontFamily: '"Nunito", sans-serif', fontWeight: 700, fontSize: '0.95rem', borderRadius: 999 }}
+              >
+                {card.cta}
+              </button>
+            )}
+            {/* Big image below text */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.55, ease: 'easeOut', delay: 0.15 }}
+              className="mt-6 w-full rounded-3xl overflow-hidden shadow-2xl"
+              style={{ aspectRatio: '4/3', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <img
+                src={card.img}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
+            </motion.div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -384,8 +479,11 @@ export function Home() {
         </div>
       </div>
 
-      {/* ─── Sticky scroll story section (brown, 4 cards) ──────── */}
-      <div ref={storyOuterRef} className="relative z-[1]" style={{ height: '320vh' }}>
+      {/* ─── Story section — Mobile (simple scroll, text then image) ── */}
+      <MobileStorySection onNavigate={() => navigate('/cookies')} />
+
+      {/* ─── Sticky scroll story section — Desktop only ──────────── */}
+      <div ref={storyOuterRef} className="relative z-[1] hidden md:block" style={{ height: '320vh' }}>
         <div
           className="sticky top-0 left-0 w-full overflow-hidden"
           style={{ height: '100vh', backgroundColor: '#3B1F0E' }}

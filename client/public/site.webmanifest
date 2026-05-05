@@ -1,0 +1,17 @@
+{
+  "name": "The Dough Affair",
+  "short_name": "Dough Affair",
+  "description": "Handcrafted eggless cookies baked fresh to order.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFCDC",
+  "theme_color": "#FFFCDC",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /profile
+Disallow: /orders
+Disallow: /saved
+
+Sitemap: https://www.thedoughaffair.com/sitemap.xml

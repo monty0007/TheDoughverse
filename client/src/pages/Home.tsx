@@ -7,6 +7,14 @@ import { COOKIE_PRODUCTS } from '../data/products';
 
 const trailImages = COOKIE_PRODUCTS.map((p) => p.image);
 
+// Story section images (match card order)
+const STORY_IMAGES = [
+  'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&q=80&fit=crop',
+  COOKIE_PRODUCTS[0].image,
+  'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=400&q=80&fit=crop',
+];
+
 // Six corner/edge positions — none overlap the centred text & button block
 const MOBILE_POSITIONS = [
   { top: '5%',    left: '3%'   },
@@ -121,6 +129,19 @@ export function Home() {
   const c3tO = useTransform(storyProgress, [0.75, 0.81, 1], [0, 1, 1]);
   const c3iX = useTransform(storyProgress, [0.79, 0.87, 1], ['100%', '0%', '0%']);
   const c3iO = useTransform(storyProgress, [0.79, 0.87, 1], [0, 1, 1]);
+
+  // Mobile-only: images accumulate and stay until the section ends
+  const m0O = useTransform(storyProgress, [0.04, 0.12, 0.92, 1.0], [0, 1, 1, 0]);
+  const m0X = useTransform(storyProgress, [0.04, 0.12], [40, 0]);
+  const m1O = useTransform(storyProgress, [0.29, 0.37, 0.92, 1.0], [0, 1, 1, 0]);
+  const m1X = useTransform(storyProgress, [0.29, 0.37], [40, 0]);
+  const m2O = useTransform(storyProgress, [0.54, 0.62, 0.92, 1.0], [0, 1, 1, 0]);
+  const m2X = useTransform(storyProgress, [0.54, 0.62], [40, 0]);
+  const m3O = useTransform(storyProgress, [0.79, 0.87, 0.92, 1.0], [0, 1, 1, 0]);
+  const m3X = useTransform(storyProgress, [0.79, 0.87], [40, 0]);
+  const mImages = [STORY_IMAGES[0], STORY_IMAGES[1], STORY_IMAGES[2], STORY_IMAGES[3]];
+  const mOpacities = [m0O, m1O, m2O, m3O];
+  const mXs = [m0X, m1X, m2X, m3X];
 
   const navigate = useNavigate();
   const { open: openMenu, isOpen: menuOpen } = useMenuStore();
@@ -341,6 +362,21 @@ export function Home() {
 
           <div className="relative w-full h-full overflow-hidden">
 
+            {/* Mobile-only: accumulated image collage (top-right) */}
+            <div className="absolute top-5 right-4 z-20 md:hidden pointer-events-none grid grid-cols-2 gap-1.5">
+              {mImages.map((src, i) => (
+                <motion.img
+                  key={i}
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="w-[72px] h-[72px] rounded-xl object-cover shadow-lg"
+                  style={{ opacity: mOpacities[i], x: mXs[i], border: '1.5px solid rgba(255,255,255,0.15)' }}
+                />
+              ))}
+            </div>
+
             {/* Card 0 */}
             <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-20">
@@ -363,7 +399,7 @@ export function Home() {
                     See our cookies →
                   </button>
                 </motion.div>
-                <motion.div className="w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c0iX, opacity: c0iO, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <motion.div className="hidden md:block w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c0iX, opacity: c0iO, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src="https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=600&q=80&fit=crop" alt="Fresh cookies" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </motion.div>
               </div>
@@ -372,7 +408,7 @@ export function Home() {
             {/* Card 1 */}
             <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col-reverse md:flex-row items-center gap-6 md:gap-20">
-                <motion.div className="w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c1iX, opacity: c1iO, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <motion.div className="hidden md:block w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c1iX, opacity: c1iO, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src="https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&q=80&fit=crop" alt="Cookie packaging" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </motion.div>
                 <motion.div className="flex-1" style={{ y: c1tY, opacity: c1tO }}>
@@ -419,7 +455,7 @@ export function Home() {
                     Shop Cookies
                   </button>
                 </motion.div>
-                <motion.div className="w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c2iX, opacity: c2iO, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <motion.div className="hidden md:block w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c2iX, opacity: c2iO, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src={COOKIE_PRODUCTS[0].image} alt="Cookie delivery" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </motion.div>
               </div>
@@ -428,7 +464,7 @@ export function Home() {
             {/* Card 3 */}
             <div className="absolute inset-0 flex items-center px-4 sm:px-12 lg:px-20 pointer-events-none">
               <div className="max-w-6xl w-full mx-auto flex flex-col-reverse md:flex-row items-center gap-6 md:gap-20">
-                <motion.div className="w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c3iX, opacity: c3iO, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <motion.div className="hidden md:block w-full md:w-96 h-56 sm:h-72 md:h-96 rounded-3xl overflow-hidden shrink-0 shadow-2xl" style={{ x: c3iX, opacity: c3iO, border: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src="https://images.unsplash.com/photo-1607478900766-efe13248b125?w=600&q=80&fit=crop" alt="Assorted cookies" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </motion.div>
                 <motion.div className="flex-1" style={{ y: c3tY, opacity: c3tO }}>

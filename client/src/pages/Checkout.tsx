@@ -62,8 +62,40 @@ export function Checkout() {
     if (user && saveAddr) saveAddress(user.uid, shipping);
     setProcessing(true);
 
-    // Save order to DB and get order number
-    let finalOrderNumber: string | null = null;
+    // Build the WhatsApp message now (before any async work)
+    const orderLines = items
+      .map(({ product, quantity }) => `  • ${product.name} ×${quantity} — ₹${(product.price * quantity).toFixed(2)}`)
+      .join('\n');
+
+    // Placeholder order number — will be replaced after DB save if possible
+    const tempNum = `meow#${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const buildMessage = (num: string) => [
+      '🍪 *New Order — The Dough Affair*',
+      `*Order No: ${num}*`,
+      '',
+      '*Customer Details*',
+      `Name: ${shipping.name}`,
+      `Phone: ${shipping.phone}`,
+      `Address: ${shipping.address}, ${shipping.city} — ${shipping.zip}`,
+      '',
+      '*Order*',
+      orderLines,
+      '',
+      `*Total: ₹${total.toFixed(2)}*`,
+    ].join('\n');
+
+    const waUrl = `https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(buildMessage(tempNum))}`;
+
+    // Open WhatsApp IMMEDIATELY while still in the user-gesture context
+    // (mobile browsers block window.open after any await)
+    const waWindow = window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+    clearCart();
+    setProcessing(false);
+    setSuccess(true);
+
+    // Save order to DB in the background (non-blocking)
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (user) {
@@ -87,38 +119,13 @@ export function Checkout() {
       });
       if (res.ok) {
         const data = await res.json();
-        finalOrderNumber = data.orderNumber;
-        setOrderNumber(finalOrderNumber);
+        setOrderNumber(data.orderNumber);
+      } else {
+        setOrderNumber(tempNum);
       }
     } catch {
-      // Non-fatal — order still goes via WhatsApp
+      setOrderNumber(tempNum);
     }
-
-    const orderLines = items
-      .map(({ product, quantity }) => `  • ${product.name} ×${quantity} — ₹${(product.price * quantity).toFixed(2)}`)
-      .join('\n');
-
-    const message = [
-      '🍪 *New Order — The Dough Affair*',
-      finalOrderNumber ? `*Order No: ${finalOrderNumber}*` : '',
-      '',
-      '*Customer Details*',
-      `Name: ${shipping.name}`,
-      `Phone: ${shipping.phone}`,
-      `Address: ${shipping.address}, ${shipping.city} — ${shipping.zip}`,
-      '',
-      '*Order*',
-      orderLines,
-      '',
-      `*Total: ₹${total.toFixed(2)}*`,
-    ].filter(l => l !== '').join('\n');
-
-    const url = `https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-
-    clearCart();
-    setProcessing(false);
-    setSuccess(true);
   };
 
   if (success) {

@@ -212,9 +212,10 @@ export function Home() {
   return (
     <motion.div
       className="bg-bg text-ink pt-[6.5rem] sm:pt-24"
+      initial={false}
       animate={menuOpen ? { x: '-8%', scale: 0.96, opacity: 0.6 } : { x: '0%', scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-      style={{ transformOrigin: 'left center', willChange: 'transform' }}
+      style={{ transformOrigin: 'left center' }}
     >
       {/* Main content — sits on top of the sticky footer */}
       <div className="relative z-[1] bg-bg min-h-[100dvh] flex flex-col">

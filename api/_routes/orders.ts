@@ -8,6 +8,7 @@ import { rateLimit } from '../_middleware/security';
 const router = Router();
 const orderCreateLimiter = rateLimit('order-create', 60 * 1000, 20);
 const orderVerifyLimiter = rateLimit('order-verify', 60 * 1000, 30);
+const whaSubmitLimiter = rateLimit('wa-order-submit', 60 * 1000, 10);
 
 let razorpay: Razorpay;
 function getRazorpay() {
@@ -18,6 +19,24 @@ function getRazorpay() {
         });
     }
     return razorpay;
+}
+
+function generateOrderNumber(): string {
+    const num = Math.floor(1000 + Math.random() * 9000);
+    return `meow#${num}`;
+}
+
+async function optionalFirebaseAuth(req: Request, res: Response, next: Function) {
+    const auth = req.headers.authorization;
+    if (auth?.startsWith('Bearer ')) {
+        try {
+            const decoded = await firebaseAdmin.auth().verifyIdToken(auth.slice(7));
+            (req as any).uid = decoded.uid;
+        } catch {
+            // ignore invalid token — allow guest orders
+        }
+    }
+    next();
 }
 
 async function authMiddleware(req: Request, res: Response, next: Function) {
@@ -92,7 +111,7 @@ router.post('/verify', orderVerifyLimiter, authMiddleware, async (req: Request, 
 
     try {
         await query(
-            `UPDATE orders SET status = 'paid', razorpay_payment_id = $1, updated_at = NOW()
+            `UPDATE orders SET status = 'paid', razorpay_payment_id = $1, updated_at = datetime('now')
        WHERE razorpay_order_id = $2`,
             [razorpay_payment_id, razorpay_order_id]
         );
@@ -101,6 +120,37 @@ router.post('/verify', orderVerifyLimiter, authMiddleware, async (req: Request, 
     } catch (err) {
         console.error('Payment verify error:', err);
         return res.status(500).json({ error: 'Failed to verify payment' });
+    }
+});
+
+// POST /api/orders/whatsapp — save a WhatsApp-based order to DB (guest + logged-in)
+router.post('/whatsapp', whaSubmitLimiter, optionalFirebaseAuth, async (req: Request, res: Response) => {
+    const { items, shipping, total } = req.body;
+    const uid = (req as any).uid ?? null;
+
+    if (!items?.length || !shipping?.name || !total) {
+        return res.status(400).json({ error: 'Invalid order data' });
+    }
+
+    // Ensure a unique order number
+    let orderNumber = generateOrderNumber();
+    for (let i = 0; i < 5; i++) {
+        const existing = await query('SELECT id FROM orders WHERE order_number = $1', [orderNumber]);
+        if (!existing.rows.length) break;
+        orderNumber = generateOrderNumber();
+    }
+
+    try {
+        const result = await query(
+            `INSERT INTO orders (firebase_uid, order_number, amount, currency, status, admin_status, items, shipping)
+       VALUES ($1, $2, $3, 'INR', 'paid', 'pending', $4, $5)
+       RETURNING id, order_number`,
+            [uid, orderNumber, Math.round(total * 100), JSON.stringify(items), JSON.stringify(shipping)]
+        );
+        return res.json({ ok: true, orderNumber: result.rows[0].order_number, id: result.rows[0].id });
+    } catch (err: any) {
+        console.error('WhatsApp order save error:', err);
+        return res.status(500).json({ error: 'Failed to save order' });
     }
 });
 

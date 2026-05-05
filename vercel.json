@@ -15,7 +15,7 @@
                 { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
                 { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
                 { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(self)" },
-                { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'sha256-s9jXiI4+scdXSF5i/JgIAc/fYp5iBp5+8WjRFWfbVCY=' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:3000 http://localhost:4000; frame-src https://api.razorpay.com https://checkout.razorpay.com; frame-ancestors 'self'; form-action 'self' https://api.razorpay.com https://checkout.razorpay.com; upgrade-insecure-requests" }
+                { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:3000 http://localhost:4000 https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://firebase.googleapis.com https://firestore.googleapis.com; frame-src https://accounts.google.com https://*.firebaseapp.com; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests" }
             ]
         },
         {

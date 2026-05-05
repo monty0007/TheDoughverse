@@ -130,18 +130,18 @@ export function Home() {
   const c3iX = useTransform(storyProgress, [0.79, 0.87, 1], ['100%', '0%', '0%']);
   const c3iO = useTransform(storyProgress, [0.79, 0.87, 1], [0, 1, 1]);
 
-  // Mobile-only: images accumulate and stay until the section ends
-  const m0O = useTransform(storyProgress, [0.04, 0.12, 0.92, 1.0], [0, 1, 1, 0]);
-  const m0X = useTransform(storyProgress, [0.04, 0.12], [40, 0]);
-  const m1O = useTransform(storyProgress, [0.29, 0.37, 0.92, 1.0], [0, 1, 1, 0]);
-  const m1X = useTransform(storyProgress, [0.29, 0.37], [40, 0]);
-  const m2O = useTransform(storyProgress, [0.54, 0.62, 0.92, 1.0], [0, 1, 1, 0]);
-  const m2X = useTransform(storyProgress, [0.54, 0.62], [40, 0]);
-  const m3O = useTransform(storyProgress, [0.79, 0.87, 0.92, 1.0], [0, 1, 1, 0]);
-  const m3X = useTransform(storyProgress, [0.79, 0.87], [40, 0]);
+  // Mobile-only: images accumulate at bottom and stay until the section ends
+  const m0O = useTransform(storyProgress, [0.04, 0.12, 0.97, 1.0], [0, 1, 1, 0]);
+  const m0Y = useTransform(storyProgress, [0.04, 0.12], [40, 0]);
+  const m1O = useTransform(storyProgress, [0.29, 0.37, 0.97, 1.0], [0, 1, 1, 0]);
+  const m1Y = useTransform(storyProgress, [0.29, 0.37], [40, 0]);
+  const m2O = useTransform(storyProgress, [0.54, 0.62, 0.97, 1.0], [0, 1, 1, 0]);
+  const m2Y = useTransform(storyProgress, [0.54, 0.62], [40, 0]);
+  const m3O = useTransform(storyProgress, [0.79, 0.87, 0.97, 1.0], [0, 1, 1, 0]);
+  const m3Y = useTransform(storyProgress, [0.79, 0.87], [40, 0]);
   const mImages = [STORY_IMAGES[0], STORY_IMAGES[1], STORY_IMAGES[2], STORY_IMAGES[3]];
   const mOpacities = [m0O, m1O, m2O, m3O];
-  const mXs = [m0X, m1X, m2X, m3X];
+  const mYs = [m0Y, m1Y, m2Y, m3Y];
 
   const navigate = useNavigate();
   const { open: openMenu, isOpen: menuOpen } = useMenuStore();
@@ -362,18 +362,22 @@ export function Home() {
 
           <div className="relative w-full h-full overflow-hidden">
 
-            {/* Mobile-only: accumulated image collage (top-right) */}
-            <div className="absolute top-5 right-4 z-20 md:hidden pointer-events-none grid grid-cols-2 gap-1.5">
+            {/* Mobile-only: images slide up from bottom and accumulate as you scroll */}
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center items-end gap-3 z-20 md:hidden pointer-events-none">
               {mImages.map((src, i) => (
-                <motion.img
+                <motion.div
                   key={i}
-                  src={src}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="w-[72px] h-[72px] rounded-xl object-cover shadow-lg"
-                  style={{ opacity: mOpacities[i], x: mXs[i], border: '1.5px solid rgba(255,255,255,0.15)' }}
-                />
+                  className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl shrink-0"
+                  style={{ opacity: mOpacities[i], y: mYs[i], border: '2px solid rgba(255,255,255,0.2)' }}
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
               ))}
             </div>
 

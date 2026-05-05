@@ -184,6 +184,7 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
   const count = totalItems();
   const { user: fbUser } = useFirebaseAuth();
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [showSupportConfirm, setShowSupportConfirm] = useState(false);
 
   useEffect(() => {
     setAvatarFailed(false);
@@ -446,22 +447,72 @@ function Navbar({ scrolled, hidden }: { scrolled: boolean; hidden: boolean }) {
         {/* Right actions */}
         <div className="relative z-10 flex shrink-0 items-center gap-2 sm:gap-2">
           {/* WhatsApp support button */}
-          <a
-            href={getWhatsAppSupportUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              e.preventDefault();
-              toast.success('Connecting you to support on WhatsApp!', { icon: '💬', duration: 2500 });
-              setTimeout(() => window.open(getWhatsAppSupportUrl(), '_blank', 'noopener,noreferrer'), 400);
-            }}
+          <button
+            onClick={() => setShowSupportConfirm(true)}
             className="flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all active:scale-95 min-h-[32px] sm:min-h-[44px]"
             style={{ backgroundColor: '#25D366', color: '#fff', fontFamily: '"Nunito", sans-serif' }}
             aria-label="Contact support on WhatsApp"
           >
             <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>Support</span>
-          </a>
+          </button>
+
+          {/* Support confirmation modal */}
+          <AnimatePresence>
+            {showSupportConfirm && (
+              <motion.div
+                key="support-confirm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4"
+                style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+                onClick={() => setShowSupportConfirm(false)}
+              >
+                <motion.div
+                  initial={{ y: 60, opacity: 0, scale: 0.96 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 40, opacity: 0, scale: 0.96 }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+                  className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+                  style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-ink)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#25D36622' }}>
+                      <WhatsAppIcon className="w-7 h-7 text-[#25D366]" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold" style={{ fontFamily: '"Fredoka One", cursive' }}>Chat on WhatsApp?</p>
+                      <p className="text-sm mt-1 opacity-60" style={{ fontFamily: '"Nunito", sans-serif' }}>
+                        This will open WhatsApp to connect you with our support team.
+                      </p>
+                    </div>
+                    <div className="flex gap-3 w-full mt-1">
+                      <button
+                        onClick={() => setShowSupportConfirm(false)}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+                        style={{ backgroundColor: 'rgba(128,128,128,0.15)', color: 'var(--color-ink)', fontFamily: '"Nunito", sans-serif' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowSupportConfirm(false);
+                          window.open(getWhatsAppSupportUrl(), '_blank', 'noopener,noreferrer');
+                        }}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+                        style={{ backgroundColor: '#25D366', color: '#fff', fontFamily: '"Nunito", sans-serif' }}
+                      >
+                        <WhatsAppIcon className="w-4 h-4" />
+                        Yes, open
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Theme toggle — desktop only (mobile version is on the left) */}
           <button

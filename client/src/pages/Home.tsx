@@ -338,12 +338,12 @@ export function Home() {
       </div>{/* end main-content z-[1] wrapper */}
 
       {/* ─── Full-screen horizontal-scroll heading ────────────── */}
-      <div ref={headingOuterRef} className="relative z-[1]" style={{ height: isMobile ? '70vh' : '180vh' }}>
-        <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex items-center bg-bg" style={{ height: isMobile ? '70vh' : '100vh' }}>
+      <div ref={headingOuterRef} className="relative z-[1]" style={{ height: '180vh' }}>
+        <div className="sticky top-0 left-0 w-full h-screen overflow-hidden flex items-center bg-bg">
           <motion.div
             className="flex items-center whitespace-nowrap select-none pl-[10vw]"
             style={{
-              x: isMobile ? 0 : headingX,
+              x: headingX,
               fontFamily: '"Fredoka One", cursive',
               color: 'var(--color-ink)',
               fontSize: 'clamp(4rem, 14vw, 14rem)',
